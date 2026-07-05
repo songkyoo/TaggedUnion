@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>Macaron.TaggedUnion</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Macaron.TaggedUnion</RootNamespace>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>Gyu Song</Authors>
+    <PackageId>Macaron.TaggedUnion</PackageId>
+    <PackageLicenseExpression>Unlicense</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/songkyoo/TaggedUnion</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TaggedUnion.Core\TaggedUnion.Core.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\TaggedUnion.Generator\TaggedUnion.Generator.csproj" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\TaggedUnion.Core\bin\$(Configuration)\netstandard2.0\Macaron.TaggedUnion.Core.dll" Pack="true" PackagePath="lib/netstandard2.0" />
+    <None Include="..\TaggedUnion.Core\bin\$(Configuration)\netstandard2.0\Macaron.TaggedUnion.Core.dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
+    <None Include="..\TaggedUnion.Generator\bin\$(Configuration)\netstandard2.0\Macaron.TaggedUnion.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
+  </ItemGroup>
+
+</Project>
+
