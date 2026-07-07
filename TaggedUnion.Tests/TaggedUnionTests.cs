@@ -230,4 +230,21 @@ public sealed class TaggedUnionTests
             """
         );
     }
+
+    [Test]
+    public void TypeIsNotReadOnlyPartialStruct()
+    {
+        AssertDiagnostic(
+            sourceCode:
+            """
+            namespace Macaron.TaggedUnion.Tests;
+
+            [TaggedUnion(typeof(int), typeof(string))]
+            public partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0001"
+        );
+    }
 }

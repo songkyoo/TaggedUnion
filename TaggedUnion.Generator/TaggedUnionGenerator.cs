@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 using static Macaron.TaggedUnion.SourceGenerationHelper;
@@ -54,6 +55,24 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         return true;
     }
 
+    private static void ValidateTarget(
+        StructDeclarationSyntax structDeclarationSyntax,
+        ImmutableArray<Diagnostic>.Builder diagnosticsBuilder
+    )
+    {
+        var modifiers = structDeclarationSyntax.Modifiers;
+
+        if (!modifiers.Any(SyntaxKind.ReadOnlyKeyword) || !modifiers.Any(SyntaxKind.PartialKeyword))
+        {
+            diagnosticsBuilder.Add(Diagnostic.Create(
+                descriptor: TaggedUnionDiagnostics.TargetTypeMustBeReadOnlyPartialStructRule,
+                location: structDeclarationSyntax.GetLocation(),
+                messageArgs: [structDeclarationSyntax.Identifier]
+            ));
+        }
+    }
+
+
     private static string GetCaseTypeName(ITypeSymbol typeSymbol)
     {
         return typeSymbol.ToDisplayString(FullyQualifiedFormat.WithMiscellaneousOptions(
@@ -103,6 +122,16 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                     if (!TryGetTypeArguments(taggedUnionAttribute, cancellationToken, out var typeArgumentContexts))
                     {
                         return new UnionValidationResult.CompilationError();
+                    }
+
+                    var structDeclarationSyntax = (StructDeclarationSyntax)context.TargetNode;
+                    var diagnosticsBuilder = ImmutableArray.CreateBuilder<Diagnostic>();
+
+                    ValidateTarget(structDeclarationSyntax, diagnosticsBuilder);
+
+                    if (diagnosticsBuilder.Any())
+                    {
+                        return new UnionValidationResult.Invalid(diagnosticsBuilder.ToImmutable());
                     }
 
                     var caseContextsBuilder = ImmutableArray.CreateBuilder<UnionCaseContext>();

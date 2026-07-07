@@ -44,6 +44,20 @@ internal static class Helper
         AssertGeneratedCode(sourceCode, sourceIndex: 0, expected);
     }
 
+    public static void AssertDiagnostic(string sourceCode, string expectedDiagnosticId)
+    {
+        var (diagnostics, _) = CompileAndGetResults<TaggedUnionGenerator>(
+            sourceCode,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+        );
+        var actualDiagnosticIds = diagnostics
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .Select(diagnostic => diagnostic.Id)
+            .ToArray();
+
+        Assert.That(actualDiagnosticIds, Has.Some.Matches(expectedDiagnosticId));
+    }
+
     private static (ImmutableArray<Diagnostic> diagnostics, string[] generatedCodes) CompileAndGetResults<T>(
         string sourceCode,
         Assembly[]? additionalAssemblies = null
