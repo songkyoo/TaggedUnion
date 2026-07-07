@@ -12,4 +12,13 @@ internal static class TaggedUnionDiagnostics
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
+
+    public static readonly DiagnosticDescriptor TargetTypeMustBeNotGenericRule = new(
+        id: "MTU0002",
+        title: "Target type must be not generic",
+        messageFormat: "Type '{0}' is a generic type. Only non-generic structs can be used as tagged union targets.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
 }

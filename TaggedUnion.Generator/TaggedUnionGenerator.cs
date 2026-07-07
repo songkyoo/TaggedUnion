@@ -69,6 +69,17 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 location: structDeclarationSyntax.GetLocation(),
                 messageArgs: [structDeclarationSyntax.Identifier]
             ));
+
+            return;
+        }
+
+        if (structDeclarationSyntax.TypeParameterList != null)
+        {
+            diagnosticsBuilder.Add(Diagnostic.Create(
+                descriptor: TaggedUnionDiagnostics.TargetTypeMustBeNotGenericRule,
+                location: structDeclarationSyntax.GetLocation(),
+                messageArgs: [structDeclarationSyntax.Identifier]
+            ));
         }
     }
 
