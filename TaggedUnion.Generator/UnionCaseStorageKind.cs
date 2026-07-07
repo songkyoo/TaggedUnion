@@ -1,6 +1,6 @@
 ﻿namespace Macaron.TaggedUnion;
 
-public enum UnionCaseStorageKind
+internal enum UnionCaseStorageKind
 {
     None,
 

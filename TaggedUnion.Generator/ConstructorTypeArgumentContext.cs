@@ -2,7 +2,7 @@
 
 namespace Macaron.TaggedUnion;
 
-public sealed record ConstructorTypeArgumentContext(
+internal sealed record ConstructorTypeArgumentContext(
     SyntaxNode Node,
     ITypeSymbol Symbol
 );

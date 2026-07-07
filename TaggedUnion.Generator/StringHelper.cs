@@ -3,7 +3,7 @@ using static Microsoft.CodeAnalysis.CSharp.SyntaxKind;
 
 namespace Macaron.TaggedUnion;
 
-public static class StringHelper
+internal static class StringHelper
 {
     public static string GetCamelCaseName(string name)
     {

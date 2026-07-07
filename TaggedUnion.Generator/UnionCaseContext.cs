@@ -2,7 +2,7 @@
 
 namespace Macaron.TaggedUnion;
 
-public sealed record UnionCaseContext(
+internal sealed record UnionCaseContext(
     ITypeSymbol TypeSymbol,
     UnionCaseStorageKind StorageKind,
     int Tag,

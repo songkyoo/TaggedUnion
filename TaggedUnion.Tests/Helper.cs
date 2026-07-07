@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace Macaron.TaggedUnion.Tests;
 
-public static class Helper
+internal static class Helper
 {
     public static void AssertGeneratedCode(string sourceCode, string[] expectedCodes)
     {

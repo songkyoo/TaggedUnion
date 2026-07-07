@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Macaron.TaggedUnion;
 
-public abstract record UnionValidationResult
+internal abstract record UnionValidationResult
 {
     public sealed record CompilationError : UnionValidationResult;
 
