@@ -55,7 +55,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         return true;
     }
 
-    private static void ValidateTarget(
+    private static bool ValidateTargetTypeDeclaration(
         StructDeclarationSyntax structDeclarationSyntax,
         ImmutableArray<Diagnostic>.Builder diagnosticsBuilder
     )
@@ -70,7 +70,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 messageArgs: [structDeclarationSyntax.Identifier]
             ));
 
-            return;
+            return false;
         }
 
         if (structDeclarationSyntax.TypeParameterList != null)
@@ -80,9 +80,12 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 location: structDeclarationSyntax.GetLocation(),
                 messageArgs: [structDeclarationSyntax.Identifier]
             ));
-        }
-    }
 
+            return false;
+        }
+
+        return true;
+    }
 
     private static string GetCaseTypeName(ITypeSymbol typeSymbol)
     {
@@ -138,9 +141,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                     var structDeclarationSyntax = (StructDeclarationSyntax)context.TargetNode;
                     var diagnosticsBuilder = ImmutableArray.CreateBuilder<Diagnostic>();
 
-                    ValidateTarget(structDeclarationSyntax, diagnosticsBuilder);
-
-                    if (diagnosticsBuilder.Any())
+                    if (!ValidateTargetTypeDeclaration(structDeclarationSyntax, diagnosticsBuilder))
                     {
                         return new UnionValidationResult.Invalid(diagnosticsBuilder.ToImmutable());
                     }
