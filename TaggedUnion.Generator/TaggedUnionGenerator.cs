@@ -11,6 +11,7 @@ using static Microsoft.CodeAnalysis.SymbolDisplayMiscellaneousOptions;
 
 namespace Macaron.TaggedUnion;
 
+[Generator(LanguageNames.CSharp)]
 public sealed class TaggedUnionGenerator : IIncrementalGenerator
 {
     #region Constants
