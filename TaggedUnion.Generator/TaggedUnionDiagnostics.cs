@@ -48,4 +48,13 @@ internal static class TaggedUnionDiagnostics
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
+
+    public static readonly DiagnosticDescriptor DuplicateCaseParameterNameRule = new(
+        id: "MTU0006",
+        title: "Case parameter name cannot be duplicated",
+        messageFormat: "Case type '{0}' generates duplicate parameter name '{1}' in tagged union target type '{2}'.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
 }

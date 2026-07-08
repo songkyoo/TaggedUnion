@@ -151,4 +151,36 @@ public sealed class DiagnosticTests
             expectedDiagnosticId: "MTU0005"
         );
     }
+
+    [Test]
+    public void DuplicateCaseParameterName()
+    {
+        AssertDiagnostic(
+            sourceCode:
+            """
+            namespace Macaron.TaggedUnion.Tests.Left
+            {
+                public class Qux
+                {
+                }
+            }
+
+            namespace Macaron.TaggedUnion.Tests.Right
+            {
+                public class Qux
+                {
+                }
+            }
+
+            namespace Macaron.TaggedUnion.Tests
+            {
+                [TaggedUnion(typeof(Left.Qux), typeof(Right.Qux))]
+                public readonly partial struct Foo
+                {
+                }
+            }
+            """,
+            expectedDiagnosticId: "MTU0006"
+        );
+    }
 }
