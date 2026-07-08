@@ -2,7 +2,7 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-using static Macaron.TaggedUnion.SourceGenerationHelper;
+using static Macaron.TaggedUnion.TaggedUnionSourceTextFactory;
 using static Microsoft.CodeAnalysis.SymbolDisplayFormat;
 
 namespace Macaron.TaggedUnion;
