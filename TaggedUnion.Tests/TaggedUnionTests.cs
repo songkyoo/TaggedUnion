@@ -284,4 +284,80 @@ public sealed class TaggedUnionTests
             expectedDiagnosticId: "MTU0003"
         );
     }
+
+    [Test]
+    public void VoidCaseTypeNotAllowed()
+    {
+        AssertDiagnostic(
+            sourceCode:
+            """
+            namespace Macaron.TaggedUnion.Tests;
+
+            [TaggedUnion(typeof(void), typeof(string))]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0004"
+        );
+    }
+
+    [Test]
+    public void ObjectCaseTypeNotAllowed()
+    {
+        AssertDiagnostic(
+            sourceCode:
+            """
+            namespace Macaron.TaggedUnion.Tests;
+
+            [TaggedUnion(typeof(object), typeof(string))]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0004"
+        );
+    }
+
+    [Test]
+    public void UnboundedGenericCaseTypeNotAllowed()
+    {
+        AssertDiagnostic(
+            sourceCode:
+            """
+            using System.Collections.Generic;
+
+            namespace Macaron.TaggedUnion.Tests;
+
+            [TaggedUnion(typeof(List<>), typeof(string))]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0004"
+        );
+    }
+
+    [Test]
+    public void RefLikeCaseTypeNotAllowed()
+    {
+        AssertDiagnostic(
+            sourceCode:
+            """
+            using System.Collections.Generic;
+
+            namespace Macaron.TaggedUnion.Tests;
+
+            ref struct Qux
+            {
+            }
+
+            [TaggedUnion(typeof(Qux), typeof(string))]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0004"
+        );
+    }
 }

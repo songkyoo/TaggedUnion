@@ -30,4 +30,13 @@ internal static class TaggedUnionDiagnostics
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
+
+    public static readonly DiagnosticDescriptor NotAllowedCaseTypeRule = new(
+        id: "MTU0004",
+        title: "Object case type not allowed",
+        messageFormat: "Case type '{0}' is not allowed in tagged union target type '{1}'.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
 }

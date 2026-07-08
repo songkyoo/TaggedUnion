@@ -5,9 +5,7 @@ namespace Macaron.TaggedUnion;
 
 internal abstract record UnionValidationResult
 {
-    public sealed record CompilationError : UnionValidationResult;
+    public sealed record Failure(ImmutableArray<Diagnostic> Diagnostics) : UnionValidationResult;
 
-    public sealed record Invalid(ImmutableArray<Diagnostic> Diagnostics) : UnionValidationResult;
-
-    public sealed record Valid(UnionContext Context) : UnionValidationResult;
+    public sealed record Success(UnionContext Context) : UnionValidationResult;
 }

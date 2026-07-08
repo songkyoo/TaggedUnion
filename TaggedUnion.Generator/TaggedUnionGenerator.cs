@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using static Macaron.TaggedUnion.SourceGenerationHelper;
 using static Macaron.TaggedUnion.StringHelper;
 using static Macaron.TaggedUnion.UnionCaseStorageKind;
+using static Microsoft.CodeAnalysis.SpecialType;
 using static Microsoft.CodeAnalysis.SymbolDisplayFormat;
 using static Microsoft.CodeAnalysis.SymbolDisplayMiscellaneousOptions;
 
@@ -90,7 +91,8 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
     private static bool ValidateTargetTypeMembers(
         StructDeclarationSyntax structDeclarationSyntax,
         INamedTypeSymbol typeSymbol,
-        ImmutableArray<Diagnostic>.Builder diagnosticsBuilder
+        ImmutableArray<Diagnostic>.Builder diagnosticsBuilder,
+        CancellationToken cancellationToken
     )
     {
         var userDefinedConstructorSymbols = typeSymbol
@@ -102,9 +104,11 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         {
             foreach (var syntaxReference in userDefinedConstructorSymbols.SelectMany(x => x.DeclaringSyntaxReferences))
             {
+                var syntax = (ConstructorDeclarationSyntax)syntaxReference.GetSyntax(cancellationToken);
+
                 diagnosticsBuilder.Add(Diagnostic.Create(
                     descriptor: TaggedUnionDiagnostics.UserDefinedConstructorNotAllowedRule,
-                    location: ((ConstructorDeclarationSyntax)syntaxReference.GetSyntax()).Identifier.GetLocation(),
+                    location: syntax.Identifier.GetLocation(),
                     messageArgs: [structDeclarationSyntax.Identifier]
                 ));
             }
@@ -113,6 +117,61 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         }
 
         return true;
+    }
+
+    private static bool ValidateCaseTypes(
+        StructDeclarationSyntax structDeclarationSyntax,
+        ImmutableArray<ConstructorTypeArgumentContext> contexts,
+        ImmutableArray<Diagnostic>.Builder diagnosticsBuilder
+    )
+    {
+        var notAllowedTypes = new List<ConstructorTypeArgumentContext>();
+
+        foreach (var context in contexts)
+        {
+            var (_, typeSymbol) = context;
+
+            switch (typeSymbol)
+            {
+                case INamedTypeSymbol namedTypeSymbol:
+                {
+                    if (namedTypeSymbol.SpecialType is System_Void or System_Object
+                        || namedTypeSymbol.IsUnboundGenericType
+                        || namedTypeSymbol.IsRefLikeType
+                    )
+                    {
+                        notAllowedTypes.Add(context);
+                    }
+
+                    break;
+                }
+                case IArrayTypeSymbol:
+                {
+                    break;
+                }
+                default:
+                {
+                    notAllowedTypes.Add(context);
+
+                    break;
+                }
+            }
+        }
+
+        foreach (var (syntaxNode, typeSymbol) in notAllowedTypes)
+        {
+            diagnosticsBuilder.Add(Diagnostic.Create(
+                descriptor: TaggedUnionDiagnostics.NotAllowedCaseTypeRule,
+                location: syntaxNode.GetLocation(),
+                messageArgs:
+                [
+                    typeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                    structDeclarationSyntax.Identifier,
+                ]
+            ));
+        }
+
+        return notAllowedTypes.Count == 0;
     }
 
     private static string GetCaseTypeName(ITypeSymbol typeSymbol)
@@ -163,27 +222,42 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
 
                     if (!TryGetTypeArguments(taggedUnionAttribute, cancellationToken, out var typeArgumentContexts))
                     {
-                        return new UnionValidationResult.CompilationError();
+                        return new UnionValidationResult.Failure(ImmutableArray<Diagnostic>.Empty);
                     }
 
                     var structDeclarationSyntax = (StructDeclarationSyntax)context.TargetNode;
-                    var typeSymbol = context.SemanticModel.GetDeclaredSymbol(
+                    var targetTypeSymbol = context.SemanticModel.GetDeclaredSymbol(
                         structDeclarationSyntax,
                         cancellationToken
                     );
 
-                    if (typeSymbol == null)
+                    if (targetTypeSymbol == null)
                     {
-                        return new UnionValidationResult.CompilationError();
+                        return new UnionValidationResult.Failure(ImmutableArray<Diagnostic>.Empty);
                     }
 
                     var diagnosticsBuilder = ImmutableArray.CreateBuilder<Diagnostic>();
+                    var isValid = true;
 
-                    if (!ValidateTargetTypeDeclaration(structDeclarationSyntax, diagnosticsBuilder)
-                        || !ValidateTargetTypeMembers(structDeclarationSyntax, typeSymbol, diagnosticsBuilder)
-                    )
+                    isValid &= ValidateTargetTypeDeclaration(
+                        structDeclarationSyntax,
+                        diagnosticsBuilder
+                    );
+                    isValid &= ValidateTargetTypeMembers(
+                        structDeclarationSyntax,
+                        targetTypeSymbol,
+                        diagnosticsBuilder,
+                        cancellationToken
+                    );
+                    isValid &= ValidateCaseTypes(
+                        structDeclarationSyntax,
+                        typeArgumentContexts,
+                        diagnosticsBuilder
+                    );
+
+                    if (!isValid)
                     {
-                        return new UnionValidationResult.Invalid(diagnosticsBuilder.ToImmutable());
+                        return new UnionValidationResult.Failure(diagnosticsBuilder.ToImmutable());
                     }
 
                     var caseContextsBuilder = ImmutableArray.CreateBuilder<UnionCaseContext>();
@@ -211,7 +285,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                         CaseContexts: caseContextsBuilder.ToImmutable()
                     );
 
-                    return new UnionValidationResult.Valid(unionContext);
+                    return new UnionValidationResult.Success(unionContext);
                 }
             );
 
@@ -219,11 +293,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         {
             switch (result)
             {
-                case UnionValidationResult.CompilationError:
-                {
-                    return;
-                }
-                case UnionValidationResult.Invalid { Diagnostics: var diagnostics }:
+                case UnionValidationResult.Failure { Diagnostics: var diagnostics }:
                 {
                     foreach (var diagnostic in diagnostics)
                     {
@@ -232,7 +302,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
 
                     return;
                 }
-                case UnionValidationResult.Valid { Context: var context }:
+                case UnionValidationResult.Success { Context: var context }:
                 {
                     var hintName = GetHintName(context.TypeSymbol);
                     var sourceText = GenerateSourceText(context);
