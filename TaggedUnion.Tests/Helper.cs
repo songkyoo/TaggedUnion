@@ -46,6 +46,11 @@ internal static class Helper
 
     public static void AssertDiagnostic(string sourceCode, string expectedDiagnosticId)
     {
+        AssertDiagnostics(sourceCode, expectedDiagnosticId);
+    }
+
+    public static void AssertDiagnostics(string sourceCode, params string[] expectedDiagnosticIds)
+    {
         var (diagnostics, _) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
@@ -55,7 +60,7 @@ internal static class Helper
             .Select(diagnostic => diagnostic.Id)
             .ToArray();
 
-        Assert.That(actualDiagnosticIds, Has.Some.Matches(expectedDiagnosticId));
+        Assert.That(actualDiagnosticIds, Is.EquivalentTo(expectedDiagnosticIds));
     }
 
     private static (ImmutableArray<Diagnostic> diagnostics, string[] generatedCodes) CompileAndGetResults<T>(
