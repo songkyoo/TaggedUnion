@@ -6,5 +6,7 @@ namespace Macaron.Union;
 internal sealed record UnionCaseCandidateContext(
     AttributeArgumentSyntax ArgumentSyntax,
     ITypeSymbol TypeSymbol,
-    string ParamName
+    string ParamName,
+    Location ParamNameLocation,
+    bool IsParamNameExplicit
 );

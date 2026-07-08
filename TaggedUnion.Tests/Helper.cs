@@ -85,6 +85,34 @@ internal static class Helper
         Assert.That(actualDiagnosticIds, Is.EquivalentTo(expectedDiagnosticIds));
     }
 
+    public static void AssertDiagnosticLocationText(
+        string sourceCode,
+        string expectedDiagnosticId,
+        string expectedLocationText
+    )
+    {
+        var (diagnostics, _) = CompileAndGetResults<TaggedUnionGenerator>(
+            sourceCode,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+        );
+        var errorDiagnostics = diagnostics
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        var actualDiagnosticIds = errorDiagnostics
+            .Select(diagnostic => diagnostic.Id)
+            .ToArray();
+
+        Assert.That(actualDiagnosticIds, Is.EquivalentTo(new[] { expectedDiagnosticId }));
+
+        var diagnostic = errorDiagnostics.Single(diagnostic => diagnostic.Id == expectedDiagnosticId);
+
+        Assert.That(diagnostic.Location.SourceTree, Is.Not.Null);
+        Assert.That(
+            actual: diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan),
+            expression: Is.EqualTo(expectedLocationText)
+        );
+    }
+
     private static (ImmutableArray<Diagnostic> diagnostics, string[] generatedCodes) CompileAndGetResults<T>(
         string sourceCode,
         Assembly[]? additionalAssemblies = null

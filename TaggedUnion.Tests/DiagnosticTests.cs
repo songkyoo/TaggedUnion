@@ -185,6 +185,64 @@ public sealed class DiagnosticTests
     }
 
     [Test]
+    public void DuplicateCaseParameterNameFromCaseAttribute()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public class Qux
+            {
+            }
+
+            [TaggedUnion(typeof(Qux), typeof(string))]
+            [TaggedUnionCase(typeof(Qux), "string")]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0006",
+            expectedLocationText: "\"string\""
+        );
+    }
+
+    [Test]
+    public void DuplicateCaseParameterNameBetweenCaseAttributes()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests.Left
+            {
+                public class Qux
+                {
+                }
+            }
+
+            namespace Macaron.Union.Tests.Right
+            {
+                public class Bar
+                {
+                }
+            }
+
+            namespace Macaron.Union.Tests
+            {
+                [TaggedUnion(typeof(Left.Qux), typeof(Right.Bar))]
+                [TaggedUnionCase(typeof(Left.Qux), "value")]
+                [TaggedUnionCase(typeof(Right.Bar), @"value")]
+                public readonly partial struct Foo
+                {
+                }
+            }
+            """,
+            expectedDiagnosticId: "MTU0006",
+            expectedLocationText: "@\"value\""
+        );
+    }
+
+    [Test]
     public void MultipleCaseTypeDiagnostics()
     {
         AssertDiagnostics(
