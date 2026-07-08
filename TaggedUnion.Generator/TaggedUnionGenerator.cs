@@ -87,6 +87,34 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         return true;
     }
 
+    private static bool ValidateTargetTypeMembers(
+        StructDeclarationSyntax structDeclarationSyntax,
+        INamedTypeSymbol typeSymbol,
+        ImmutableArray<Diagnostic>.Builder diagnosticsBuilder
+    )
+    {
+        var userDefinedConstructorSymbols = typeSymbol
+            .InstanceConstructors
+            .Where(x => !x.IsImplicitlyDeclared)
+            .ToImmutableArray();
+
+        if (userDefinedConstructorSymbols.Length > 0)
+        {
+            foreach (var syntaxReference in userDefinedConstructorSymbols.SelectMany(x => x.DeclaringSyntaxReferences))
+            {
+                diagnosticsBuilder.Add(Diagnostic.Create(
+                    descriptor: TaggedUnionDiagnostics.UserDefinedConstructorNotAllowedRule,
+                    location: ((ConstructorDeclarationSyntax)syntaxReference.GetSyntax()).Identifier.GetLocation(),
+                    messageArgs: [structDeclarationSyntax.Identifier]
+                ));
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
     private static string GetCaseTypeName(ITypeSymbol typeSymbol)
     {
         return typeSymbol.ToDisplayString(FullyQualifiedFormat.WithMiscellaneousOptions(
@@ -139,9 +167,21 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                     }
 
                     var structDeclarationSyntax = (StructDeclarationSyntax)context.TargetNode;
+                    var typeSymbol = context.SemanticModel.GetDeclaredSymbol(
+                        structDeclarationSyntax,
+                        cancellationToken
+                    );
+
+                    if (typeSymbol == null)
+                    {
+                        return new UnionValidationResult.CompilationError();
+                    }
+
                     var diagnosticsBuilder = ImmutableArray.CreateBuilder<Diagnostic>();
 
-                    if (!ValidateTargetTypeDeclaration(structDeclarationSyntax, diagnosticsBuilder))
+                    if (!ValidateTargetTypeDeclaration(structDeclarationSyntax, diagnosticsBuilder)
+                        || !ValidateTargetTypeMembers(structDeclarationSyntax, typeSymbol, diagnosticsBuilder)
+                    )
                     {
                         return new UnionValidationResult.Invalid(diagnosticsBuilder.ToImmutable());
                     }
@@ -150,15 +190,15 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
 
                     for (var i = 0; i < typeArgumentContexts.Length; i++)
                     {
-                        var typeSymbol = typeArgumentContexts[i].Symbol;
+                        var caseTypeSymbol = typeArgumentContexts[i].Symbol;
                         var caseContext = new UnionCaseContext(
-                            TypeSymbol: typeSymbol,
-                            StorageKind: typeSymbol.IsReferenceType
+                            TypeSymbol: caseTypeSymbol,
+                            StorageKind: caseTypeSymbol.IsReferenceType
                                 ? Reference
-                                : throw new InvalidOperationException($"Cannot determine the storage kind for type '{typeSymbol.ToDisplayString()}'."),
+                                : throw new InvalidOperationException($"Cannot determine the storage kind for type '{caseTypeSymbol.ToDisplayString()}'."),
                             Tag: i + 1,
-                            FullyQualifiedTypeName: GetCaseTypeName(typeSymbol),
-                            ParamName: GetCaseParamName(typeSymbol)
+                            FullyQualifiedTypeName: GetCaseTypeName(caseTypeSymbol),
+                            ParamName: GetCaseParamName(caseTypeSymbol)
                         );
 
                         caseContextsBuilder.Add(caseContext);

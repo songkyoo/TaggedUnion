@@ -264,4 +264,24 @@ public sealed class TaggedUnionTests
             expectedDiagnosticId: "MTU0002"
         );
     }
+
+    [Test]
+    public void UserDefinedConstructorNotAllowed()
+    {
+        AssertDiagnostic(
+            sourceCode:
+            """
+            namespace Macaron.TaggedUnion.Tests;
+
+            [TaggedUnion(typeof(int), typeof(string))]
+            public readonly partial struct Foo
+            {
+                public Foo()
+                {
+                }
+            }
+            """,
+            expectedDiagnosticId: "MTU0003"
+        );
+    }
 }

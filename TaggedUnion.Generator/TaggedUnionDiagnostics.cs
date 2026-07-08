@@ -21,4 +21,13 @@ internal static class TaggedUnionDiagnostics
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
+
+    public static readonly DiagnosticDescriptor UserDefinedConstructorNotAllowedRule = new(
+        id: "MTU0003",
+        title: "User-defined constructor not allowed",
+        messageFormat: "User-defined constructor is not allowed in tagged union target type '{0}'.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
 }
