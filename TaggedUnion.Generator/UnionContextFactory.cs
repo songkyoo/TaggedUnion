@@ -9,6 +9,7 @@ using static Microsoft.CodeAnalysis.CSharp.SyntaxKind;
 using static Microsoft.CodeAnalysis.SpecialType;
 using static Microsoft.CodeAnalysis.SymbolDisplayFormat;
 using static Microsoft.CodeAnalysis.SymbolDisplayMiscellaneousOptions;
+using static Microsoft.CodeAnalysis.TypeKind;
 
 namespace Macaron.Union;
 
@@ -435,7 +436,18 @@ internal static class UnionContextFactory
 
     private static string GetCaseParamName(ITypeSymbol typeSymbol)
     {
-        return EscapeIdentifier(GetCamelCaseName(typeSymbol.Name));
+        var originalName = typeSymbol.Name;
+
+        if (originalName.Length > 2
+            && typeSymbol.TypeKind == Interface
+            && originalName[0] == 'I'
+            && char.IsUpper(originalName[1])
+        )
+        {
+            originalName = originalName[1..];
+        }
+
+        return EscapeIdentifier(GetCamelCaseName(originalName));
     }
     #endregion
 }

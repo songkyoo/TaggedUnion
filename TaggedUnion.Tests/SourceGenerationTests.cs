@@ -232,7 +232,7 @@ public sealed class SourceGenerationTests
     }
 
     [Test]
-    public void SetCaseParamNameUsingCaseAttribute()
+    public void CaseAttributeOverridesCaseParameterName()
     {
         AssertGeneratedCodeContains(
             sourceCode:
@@ -253,6 +253,31 @@ public sealed class SourceGenerationTests
             [
                 "global::System.Action<global::Macaron.Union.Tests.Qux<int>> baz",
                 "global::System.Func<global::Macaron.Union.Tests.Qux<int>, TResult> baz"
+            ]
+        );
+    }
+
+    [Test]
+    public void InterfaceCaseParameterNameRemovesLeadingI()
+    {
+        AssertGeneratedCodeContains(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public interface IQux
+            {
+            }
+
+            [TaggedUnion(typeof(IQux), typeof(string))]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedFragments:
+            [
+                "global::System.Action<global::Macaron.Union.Tests.IQux> qux",
+                "global::System.Func<global::Macaron.Union.Tests.IQux, TResult> qux"
             ]
         );
     }
