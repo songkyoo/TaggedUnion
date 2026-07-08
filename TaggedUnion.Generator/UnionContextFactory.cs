@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 using static Macaron.Union.StringHelper;
 using static Macaron.Union.UnionCaseStorageKind;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxKind;
 using static Microsoft.CodeAnalysis.SpecialType;
 using static Microsoft.CodeAnalysis.SymbolDisplayFormat;
 using static Microsoft.CodeAnalysis.SymbolDisplayMiscellaneousOptions;
@@ -13,6 +14,10 @@ namespace Macaron.Union;
 
 internal static class UnionContextFactory
 {
+    #region Constants
+    private static readonly string TaggedUnionCaseAttributeString = "Macaron.Union.TaggedUnionCaseAttribute";
+    #endregion
+
     #region Static Methods
     public static UnionValidationResult Create(
         GeneratorAttributeSyntaxContext context,
@@ -61,6 +66,11 @@ internal static class UnionContextFactory
             return new UnionValidationResult.Failure(diagnosticsBuilder.ToImmutable());
         }
 
+        var caseAttributeMap = CreateCaseAttributeMap(taggedUnionCaseAttributes: context
+            .TargetSymbol
+            .GetAttributes()
+            .Where(x => x.AttributeClass?.ToDisplayString() == TaggedUnionCaseAttributeString)
+        );
         var caseContextsBuilder = ImmutableArray.CreateBuilder<UnionCaseContext>();
 
         for (var i = 0; i < unionCaseCandidates.Length; i++)
@@ -74,7 +84,7 @@ internal static class UnionContextFactory
                     : throw new InvalidOperationException($"Cannot determine the storage kind for type '{caseTypeSymbol.ToDisplayString()}'."),
                 Tag: i + 1,
                 FullyQualifiedTypeName: GetCaseTypeName(caseTypeSymbol),
-                ParamName: unionCaseCandidate.ParamName
+                ParamName: GetParamNameOrDefault(caseAttributeMap, caseTypeSymbol, unionCaseCandidate.ParamName)
             );
 
             caseContextsBuilder.Add(caseContext);
@@ -88,6 +98,51 @@ internal static class UnionContextFactory
         );
 
         return new UnionValidationResult.Success(unionContext);
+
+        #region Local Functions
+        static ImmutableDictionary<ITypeSymbol, AttributeData> CreateCaseAttributeMap(
+            IEnumerable<AttributeData> taggedUnionCaseAttributes
+        )
+        {
+            var taggedUnionCaseAttributeMapBuilder = ImmutableDictionary.CreateBuilder<ITypeSymbol, AttributeData>(
+                SymbolEqualityComparer.Default
+            );
+
+            foreach (var attribute in taggedUnionCaseAttributes)
+            {
+                if (attribute.ConstructorArguments[0] is not
+                    {
+                        Kind: TypedConstantKind.Type,
+                        Value: ITypeSymbol typeSymbol,
+                    })
+                {
+                    continue;
+                }
+
+                taggedUnionCaseAttributeMapBuilder.Add(typeSymbol, attribute);
+            }
+
+            return taggedUnionCaseAttributeMapBuilder.ToImmutable();
+        }
+
+        static string GetParamNameOrDefault(
+            ImmutableDictionary<ITypeSymbol, AttributeData> caseAttributeMap,
+            ITypeSymbol typeSymbol,
+            string defaultParamName
+        )
+        {
+            if (caseAttributeMap.TryGetValue(typeSymbol, out var attribute)
+                && attribute.ConstructorArguments[1].Value is string paramName
+            )
+            {
+                return paramName;
+            }
+            else
+            {
+                return defaultParamName;
+            }
+        }
+        #endregion
     }
 
     private static bool TryGetUnionCaseCandidates(
@@ -133,7 +188,7 @@ internal static class UnionContextFactory
     {
         var modifiers = structDeclarationSyntax.Modifiers;
 
-        if (!modifiers.Any(SyntaxKind.ReadOnlyKeyword) || !modifiers.Any(SyntaxKind.PartialKeyword))
+        if (!modifiers.Any(ReadOnlyKeyword) || !modifiers.Any(PartialKeyword))
         {
             diagnosticsBuilder.Add(Diagnostic.Create(
                 descriptor: TaggedUnionDiagnostics.TargetTypeMustBeReadOnlyPartialStructRule,

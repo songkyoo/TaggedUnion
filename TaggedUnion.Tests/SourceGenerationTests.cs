@@ -230,4 +230,30 @@ public sealed class SourceGenerationTests
             """
         );
     }
+
+    [Test]
+    public void SetCaseParamNameUsingCaseAttribute()
+    {
+        AssertGeneratedCodeContains(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public class Qux<T>
+            {
+            }
+
+            [TaggedUnion(typeof(Qux<int>), typeof(string))]
+            [TaggedUnionCase(typeof(Qux<int>), "baz")]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedFragments:
+            [
+                "global::System.Action<global::Macaron.Union.Tests.Qux<int>> baz",
+                "global::System.Func<global::Macaron.Union.Tests.Qux<int>, TResult> baz"
+            ]
+        );
+    }
 }

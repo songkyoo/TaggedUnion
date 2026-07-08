@@ -44,6 +44,28 @@ internal static class Helper
         AssertGeneratedCode(sourceCode, sourceIndex: 0, expected);
     }
 
+    public static void AssertGeneratedCodeContains(string sourceCode, int sourceIndex, params string[] expectedFragments)
+    {
+        var (_, generatedCodes) = CompileAndGetResults<TaggedUnionGenerator>(
+            sourceCode,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+        );
+        var generatedCode = generatedCodes[sourceIndex].ReplaceLineEndings();
+
+        foreach (var expectedFragment in expectedFragments)
+        {
+            Assert.That(
+                actual: generatedCode,
+                expression: Does.Contain(expectedFragment.ReplaceLineEndings())
+            );
+        }
+    }
+
+    public static void AssertGeneratedCodeContains(string sourceCode, params string[] expectedFragments)
+    {
+        AssertGeneratedCodeContains(sourceCode, sourceIndex: 0, expectedFragments);
+    }
+
     public static void AssertDiagnostic(string sourceCode, string expectedDiagnosticId)
     {
         AssertDiagnostics(sourceCode, expectedDiagnosticId);
