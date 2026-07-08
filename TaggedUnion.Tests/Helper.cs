@@ -3,7 +3,7 @@ using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace Macaron.TaggedUnion.Tests;
+namespace Macaron.Union.Tests;
 
 internal static class Helper
 {

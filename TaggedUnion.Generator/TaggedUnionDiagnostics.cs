@@ -1,6 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 
-namespace Macaron.TaggedUnion;
+namespace Macaron.Union;
 
 internal static class TaggedUnionDiagnostics
 {

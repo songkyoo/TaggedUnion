@@ -1,4 +1,4 @@
-﻿namespace Macaron.TaggedUnion;
+﻿namespace Macaron.Union;
 
 internal enum UnionCaseStorageKind
 {

@@ -2,10 +2,10 @@
 using System.Text;
 using Microsoft.CodeAnalysis;
 
-using static Macaron.TaggedUnion.UnionCaseStorageKind;
+using static Macaron.Union.UnionCaseStorageKind;
 using static Microsoft.CodeAnalysis.SymbolDisplayFormat;
 
-namespace Macaron.TaggedUnion;
+namespace Macaron.Union;
 
 internal sealed class TaggedUnionSourceWriter
 {

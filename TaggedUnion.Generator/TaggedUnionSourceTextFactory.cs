@@ -1,7 +1,7 @@
 using System.Text;
 using Microsoft.CodeAnalysis.Text;
 
-namespace Macaron.TaggedUnion;
+namespace Macaron.Union;
 
 internal static class TaggedUnionSourceTextFactory
 {

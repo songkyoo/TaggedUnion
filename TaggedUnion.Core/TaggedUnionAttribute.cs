@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace Macaron.TaggedUnion;
+namespace Macaron.Union;
 
 [Conditional("SOURCE_GENERATOR_ONLY")]
 [AttributeUsage(validOn: AttributeTargets.Struct)]

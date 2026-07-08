@@ -1,7 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Macaron.TaggedUnion;
+namespace Macaron.Union;
 
 internal sealed record UnionCaseCandidateContext(
     AttributeArgumentSyntax ArgumentSyntax,

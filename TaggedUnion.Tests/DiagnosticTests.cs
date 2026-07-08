@@ -1,6 +1,6 @@
-﻿using static Macaron.TaggedUnion.Tests.Helper;
+﻿using static Macaron.Union.Tests.Helper;
 
-namespace Macaron.TaggedUnion.Tests;
+namespace Macaron.Union.Tests;
 
 [TestFixture]
 public sealed class DiagnosticTests
@@ -11,7 +11,7 @@ public sealed class DiagnosticTests
         AssertDiagnostic(
             sourceCode:
             """
-            namespace Macaron.TaggedUnion.Tests;
+            namespace Macaron.Union.Tests;
 
             [TaggedUnion(typeof(int), typeof(string))]
             public partial struct Foo
@@ -28,7 +28,7 @@ public sealed class DiagnosticTests
         AssertDiagnostic(
             sourceCode:
             """
-            namespace Macaron.TaggedUnion.Tests;
+            namespace Macaron.Union.Tests;
 
             [TaggedUnion(typeof(int), typeof(string))]
             public readonly partial struct Foo<T>
@@ -45,7 +45,7 @@ public sealed class DiagnosticTests
         AssertDiagnostic(
             sourceCode:
             """
-            namespace Macaron.TaggedUnion.Tests;
+            namespace Macaron.Union.Tests;
 
             [TaggedUnion(typeof(int), typeof(string))]
             public readonly partial struct Foo
@@ -65,7 +65,7 @@ public sealed class DiagnosticTests
         AssertDiagnostic(
             sourceCode:
             """
-            namespace Macaron.TaggedUnion.Tests;
+            namespace Macaron.Union.Tests;
 
             [TaggedUnion(typeof(void), typeof(string))]
             public readonly partial struct Foo
@@ -82,7 +82,7 @@ public sealed class DiagnosticTests
         AssertDiagnostic(
             sourceCode:
             """
-            namespace Macaron.TaggedUnion.Tests;
+            namespace Macaron.Union.Tests;
 
             [TaggedUnion(typeof(object), typeof(string))]
             public readonly partial struct Foo
@@ -101,7 +101,7 @@ public sealed class DiagnosticTests
             """
             using System.Collections.Generic;
 
-            namespace Macaron.TaggedUnion.Tests;
+            namespace Macaron.Union.Tests;
 
             [TaggedUnion(typeof(List<>), typeof(string))]
             public readonly partial struct Foo
@@ -120,7 +120,7 @@ public sealed class DiagnosticTests
             """
             using System.Collections.Generic;
 
-            namespace Macaron.TaggedUnion.Tests;
+            namespace Macaron.Union.Tests;
 
             ref struct Qux
             {
@@ -141,7 +141,7 @@ public sealed class DiagnosticTests
         AssertDiagnostic(
             sourceCode:
             """
-            namespace Macaron.TaggedUnion.Tests;
+            namespace Macaron.Union.Tests;
 
             [TaggedUnion(typeof(string), typeof(string))]
             public readonly partial struct Foo
@@ -158,21 +158,21 @@ public sealed class DiagnosticTests
         AssertDiagnostic(
             sourceCode:
             """
-            namespace Macaron.TaggedUnion.Tests.Left
+            namespace Macaron.Union.Tests.Left
             {
                 public class Qux
                 {
                 }
             }
 
-            namespace Macaron.TaggedUnion.Tests.Right
+            namespace Macaron.Union.Tests.Right
             {
                 public class Qux
                 {
                 }
             }
 
-            namespace Macaron.TaggedUnion.Tests
+            namespace Macaron.Union.Tests
             {
                 [TaggedUnion(typeof(Left.Qux), typeof(Right.Qux))]
                 public readonly partial struct Foo
@@ -190,21 +190,21 @@ public sealed class DiagnosticTests
         AssertDiagnostics(
             sourceCode:
             """
-            namespace Macaron.TaggedUnion.Tests.Left
+            namespace Macaron.Union.Tests.Left
             {
                 public class Qux
                 {
                 }
             }
 
-            namespace Macaron.TaggedUnion.Tests.Right
+            namespace Macaron.Union.Tests.Right
             {
                 public class Qux
                 {
                 }
             }
 
-            namespace Macaron.TaggedUnion.Tests
+            namespace Macaron.Union.Tests
             {
                 [TaggedUnion(typeof(void), typeof(string), typeof(string), typeof(Left.Qux), typeof(Right.Qux))]
                 public readonly partial struct Foo

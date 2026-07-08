@@ -2,16 +2,16 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-using static Macaron.TaggedUnion.TaggedUnionSourceTextFactory;
+using static Macaron.Union.TaggedUnionSourceTextFactory;
 using static Microsoft.CodeAnalysis.SymbolDisplayFormat;
 
-namespace Macaron.TaggedUnion;
+namespace Macaron.Union;
 
 [Generator(LanguageNames.CSharp)]
 public sealed class TaggedUnionGenerator : IIncrementalGenerator
 {
     #region Constants
-    private const string TaggedUnionAttributeString = "Macaron.TaggedUnion.TaggedUnionAttribute";
+    private const string TaggedUnionAttributeString = "Macaron.Union.TaggedUnionAttribute";
     #endregion
 
     #region Static Methods

@@ -3,13 +3,13 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-using static Macaron.TaggedUnion.StringHelper;
-using static Macaron.TaggedUnion.UnionCaseStorageKind;
+using static Macaron.Union.StringHelper;
+using static Macaron.Union.UnionCaseStorageKind;
 using static Microsoft.CodeAnalysis.SpecialType;
 using static Microsoft.CodeAnalysis.SymbolDisplayFormat;
 using static Microsoft.CodeAnalysis.SymbolDisplayMiscellaneousOptions;
 
-namespace Macaron.TaggedUnion;
+namespace Macaron.Union;
 
 internal static class UnionContextFactory
 {

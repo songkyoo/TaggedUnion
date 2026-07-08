@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 
-namespace Macaron.TaggedUnion;
+namespace Macaron.Union;
 
 internal abstract record UnionValidationResult
 {

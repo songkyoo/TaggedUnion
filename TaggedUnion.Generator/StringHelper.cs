@@ -1,7 +1,7 @@
 ﻿using static Microsoft.CodeAnalysis.CSharp.SyntaxFacts;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxKind;
 
-namespace Macaron.TaggedUnion;
+namespace Macaron.Union;
 
 internal static class StringHelper
 {
