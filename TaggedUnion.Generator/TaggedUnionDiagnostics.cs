@@ -57,4 +57,13 @@ internal static class TaggedUnionDiagnostics
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
+
+    public static readonly DiagnosticDescriptor InvalidCaseParameterNameRule = new(
+        id: "MTU0007",
+        title: "Case parameter name must be valid",
+        messageFormat: "Case type '{0}' specifies invalid parameter name '{1}' in tagged union target type '{2}'.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
 }

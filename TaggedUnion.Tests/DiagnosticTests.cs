@@ -243,6 +243,29 @@ public sealed class DiagnosticTests
     }
 
     [Test]
+    public void InvalidCaseParameterNameFromCaseAttribute()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public class Qux
+            {
+            }
+
+            [TaggedUnion(typeof(Qux), typeof(string))]
+            [TaggedUnionCase(typeof(Qux), "bad-name")]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0007",
+            expectedLocationText: "\"bad-name\""
+        );
+    }
+
+    [Test]
     public void MultipleCaseTypeDiagnostics()
     {
         AssertDiagnostics(

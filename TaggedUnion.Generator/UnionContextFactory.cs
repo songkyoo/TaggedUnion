@@ -21,7 +21,8 @@ internal static class UnionContextFactory
     #region Types
     private sealed record TaggedUnionCaseAttributeContext(
         string ParamName,
-        Location ParamNameLocation
+        Location ParamNameLocation,
+        bool IsParamNameValid
     );
     #endregion
 
@@ -138,7 +139,8 @@ internal static class UnionContextFactory
 
                 taggedUnionCaseAttributeMapBuilder[typeSymbol] = new TaggedUnionCaseAttributeContext(
                     ParamName: EscapeIdentifier(paramName),
-                    ParamNameLocation: GetCaseAttributeParamNameLocation(attribute, cancellationToken)
+                    ParamNameLocation: GetCaseAttributeParamNameLocation(attribute, cancellationToken),
+                    IsParamNameValid: IsValidParameterName(paramName)
                 );
             }
 
@@ -161,6 +163,7 @@ internal static class UnionContextFactory
                         ParamName = caseAttribute.ParamName,
                         ParamNameLocation = caseAttribute.ParamNameLocation,
                         IsParamNameExplicit = true,
+                        IsParamNameValid = caseAttribute.IsParamNameValid,
                     });
                 }
                 else
@@ -218,7 +221,8 @@ internal static class UnionContextFactory
                 TypeSymbol: typeSymbol,
                 ParamName: GetCaseParamName(typeSymbol),
                 ParamNameLocation: attributeSyntax.ArgumentList!.Arguments[i].GetLocation(),
-                IsParamNameExplicit: false
+                IsParamNameExplicit: false,
+                IsParamNameValid: true
             ));
         }
 
@@ -298,6 +302,7 @@ internal static class UnionContextFactory
     {
         var unsupportedCaseTypes = new List<UnionCaseCandidateContext>();
         var duplicateCaseTypes = new List<UnionCaseCandidateContext>();
+        var invalidCaseParameterNames = new List<UnionCaseCandidateContext>();
         var duplicateCaseParameterNames = new List<UnionCaseCandidateContext>();
         var knownTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
         var knownParameterNames = new Dictionary<string, UnionCaseCandidateContext>(StringComparer.Ordinal);
@@ -315,6 +320,10 @@ internal static class UnionContextFactory
             else if (isDuplicateType)
             {
                 duplicateCaseTypes.Add(candidate);
+            }
+            else if (!candidate.IsParamNameValid)
+            {
+                invalidCaseParameterNames.Add(candidate);
             }
             else if (knownParameterNames.TryGetValue(candidate.ParamName, out var existingCandidate))
             {
@@ -355,6 +364,20 @@ internal static class UnionContextFactory
             ));
         }
 
+        foreach (var candidate in invalidCaseParameterNames)
+        {
+            diagnosticsBuilder.Add(Diagnostic.Create(
+                descriptor: TaggedUnionDiagnostics.InvalidCaseParameterNameRule,
+                location: candidate.ParamNameLocation,
+                messageArgs:
+                [
+                    candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                    candidate.ParamName,
+                    structDeclarationSyntax.Identifier,
+                ]
+            ));
+        }
+
         foreach (var candidate in duplicateCaseParameterNames)
         {
             diagnosticsBuilder.Add(Diagnostic.Create(
@@ -371,6 +394,7 @@ internal static class UnionContextFactory
 
         return unsupportedCaseTypes.Count == 0
             && duplicateCaseTypes.Count == 0
+            && invalidCaseParameterNames.Count == 0
             && duplicateCaseParameterNames.Count == 0;
 
         #region Local Functions

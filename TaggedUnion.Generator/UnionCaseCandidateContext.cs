@@ -8,5 +8,6 @@ internal sealed record UnionCaseCandidateContext(
     ITypeSymbol TypeSymbol,
     string ParamName,
     Location ParamNameLocation,
-    bool IsParamNameExplicit
+    bool IsParamNameExplicit,
+    bool IsParamNameValid
 );
