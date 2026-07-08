@@ -77,7 +77,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         if (structDeclarationSyntax.TypeParameterList != null)
         {
             diagnosticsBuilder.Add(Diagnostic.Create(
-                descriptor: TaggedUnionDiagnostics.TargetTypeMustBeNotGenericRule,
+                descriptor: TaggedUnionDiagnostics.TargetTypeMustBeNonGenericRule,
                 location: structDeclarationSyntax.GetLocation(),
                 messageArgs: [structDeclarationSyntax.Identifier]
             ));
@@ -107,7 +107,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 var syntax = (ConstructorDeclarationSyntax)syntaxReference.GetSyntax(cancellationToken);
 
                 diagnosticsBuilder.Add(Diagnostic.Create(
-                    descriptor: TaggedUnionDiagnostics.UserDefinedConstructorNotAllowedRule,
+                    descriptor: TaggedUnionDiagnostics.TargetTypeCannotDeclareInstanceConstructorsRule,
                     location: syntax.Identifier.GetLocation(),
                     messageArgs: [structDeclarationSyntax.Identifier]
                 ));
@@ -161,7 +161,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         foreach (var (syntaxNode, typeSymbol) in notAllowedTypes)
         {
             diagnosticsBuilder.Add(Diagnostic.Create(
-                descriptor: TaggedUnionDiagnostics.NotAllowedCaseTypeRule,
+                descriptor: TaggedUnionDiagnostics.UnsupportedCaseTypeRule,
                 location: syntaxNode.GetLocation(),
                 messageArgs:
                 [

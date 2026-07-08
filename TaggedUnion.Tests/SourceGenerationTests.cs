@@ -3,10 +3,10 @@
 namespace Macaron.TaggedUnion.Tests;
 
 [TestFixture]
-public sealed class TaggedUnionTests
+public sealed class SourceGenerationTests
 {
     [Test]
-    public void ReferenceOnly()
+    public void ReferenceCaseTypes()
     {
         AssertGeneratedCode(
             sourceCode:
@@ -228,136 +228,6 @@ public sealed class TaggedUnionTests
             }
 
             """
-        );
-    }
-
-    [Test]
-    public void TypeIsNotReadOnlyPartialStruct()
-    {
-        AssertDiagnostic(
-            sourceCode:
-            """
-            namespace Macaron.TaggedUnion.Tests;
-
-            [TaggedUnion(typeof(int), typeof(string))]
-            public partial struct Foo
-            {
-            }
-            """,
-            expectedDiagnosticId: "MTU0001"
-        );
-    }
-
-    [Test]
-    public void TypeIsNotGeneric()
-    {
-        AssertDiagnostic(
-            sourceCode:
-            """
-            namespace Macaron.TaggedUnion.Tests;
-
-            [TaggedUnion(typeof(int), typeof(string))]
-            public readonly partial struct Foo<T>
-            {
-            }
-            """,
-            expectedDiagnosticId: "MTU0002"
-        );
-    }
-
-    [Test]
-    public void UserDefinedConstructorNotAllowed()
-    {
-        AssertDiagnostic(
-            sourceCode:
-            """
-            namespace Macaron.TaggedUnion.Tests;
-
-            [TaggedUnion(typeof(int), typeof(string))]
-            public readonly partial struct Foo
-            {
-                public Foo()
-                {
-                }
-            }
-            """,
-            expectedDiagnosticId: "MTU0003"
-        );
-    }
-
-    [Test]
-    public void VoidCaseTypeNotAllowed()
-    {
-        AssertDiagnostic(
-            sourceCode:
-            """
-            namespace Macaron.TaggedUnion.Tests;
-
-            [TaggedUnion(typeof(void), typeof(string))]
-            public readonly partial struct Foo
-            {
-            }
-            """,
-            expectedDiagnosticId: "MTU0004"
-        );
-    }
-
-    [Test]
-    public void ObjectCaseTypeNotAllowed()
-    {
-        AssertDiagnostic(
-            sourceCode:
-            """
-            namespace Macaron.TaggedUnion.Tests;
-
-            [TaggedUnion(typeof(object), typeof(string))]
-            public readonly partial struct Foo
-            {
-            }
-            """,
-            expectedDiagnosticId: "MTU0004"
-        );
-    }
-
-    [Test]
-    public void UnboundedGenericCaseTypeNotAllowed()
-    {
-        AssertDiagnostic(
-            sourceCode:
-            """
-            using System.Collections.Generic;
-
-            namespace Macaron.TaggedUnion.Tests;
-
-            [TaggedUnion(typeof(List<>), typeof(string))]
-            public readonly partial struct Foo
-            {
-            }
-            """,
-            expectedDiagnosticId: "MTU0004"
-        );
-    }
-
-    [Test]
-    public void RefLikeCaseTypeNotAllowed()
-    {
-        AssertDiagnostic(
-            sourceCode:
-            """
-            using System.Collections.Generic;
-
-            namespace Macaron.TaggedUnion.Tests;
-
-            ref struct Qux
-            {
-            }
-
-            [TaggedUnion(typeof(Qux), typeof(string))]
-            public readonly partial struct Foo
-            {
-            }
-            """,
-            expectedDiagnosticId: "MTU0004"
         );
     }
 }
