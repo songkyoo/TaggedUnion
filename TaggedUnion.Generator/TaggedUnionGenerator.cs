@@ -126,10 +126,17 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
     )
     {
         var notAllowedTypes = new List<ConstructorTypeArgumentContext>();
+        var duplicatedTypes = new List<ConstructorTypeArgumentContext>();
+        var knownTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
 
         foreach (var context in contexts)
         {
             var (_, typeSymbol) = context;
+
+            if (!knownTypes.Add(typeSymbol))
+            {
+                duplicatedTypes.Add(context);
+            }
 
             switch (typeSymbol)
             {
@@ -171,7 +178,20 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
             ));
         }
 
-        return notAllowedTypes.Count == 0;
+        foreach (var (syntaxNode, typeSymbol) in duplicatedTypes)
+        {
+            diagnosticsBuilder.Add(Diagnostic.Create(
+                descriptor: TaggedUnionDiagnostics.DuplicateCaseTypeRule,
+                location: syntaxNode.GetLocation(),
+                messageArgs:
+                [
+                    typeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                    structDeclarationSyntax.Identifier,
+                ]
+            ));
+        }
+
+        return notAllowedTypes.Count == 0 && duplicatedTypes.Count == 0;
     }
 
     private static string GetCaseTypeName(ITypeSymbol typeSymbol)

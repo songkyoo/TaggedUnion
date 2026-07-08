@@ -39,4 +39,13 @@ internal static class TaggedUnionDiagnostics
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
+
+    public static readonly DiagnosticDescriptor DuplicateCaseTypeRule = new(
+        id: "MTU0005",
+        title: "Case type cannot be duplicated",
+        messageFormat: "Case type '{0}' is specified more than once in tagged union target type '{1}'.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
 }
