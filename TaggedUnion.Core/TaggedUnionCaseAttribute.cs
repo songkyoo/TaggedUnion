@@ -1,0 +1,22 @@
+﻿using System.Diagnostics;
+
+namespace Macaron.Union;
+
+[Conditional("SOURCE_GENERATOR_ONLY")]
+[AttributeUsage(validOn: AttributeTargets.Struct, AllowMultiple = true)]
+public sealed class TaggedUnionCaseAttribute : Attribute
+{
+    #region Properties
+    public Type Type { get; }
+
+    public string? ParamName { get; }
+    #endregion
+
+    #region Constructors
+    public TaggedUnionCaseAttribute(Type type, string? paramName = null)
+    {
+        Type = type;
+        ParamName = paramName;
+    }
+    #endregion
+}

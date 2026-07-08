@@ -6,8 +6,11 @@ namespace Macaron.Union;
 [AttributeUsage(validOn: AttributeTargets.Struct)]
 public sealed class TaggedUnionAttribute : Attribute
 {
+    #region Properties
     public IReadOnlyList<Type> Types { get; }
+    #endregion
 
+    #region Constructors
     public TaggedUnionAttribute(Type type1, Type type2)
     {
         Types = [type1, type2];
@@ -42,4 +45,5 @@ public sealed class TaggedUnionAttribute : Attribute
     {
         Types = [type1, type2, type3, type4, type5, type6, type7, type8];
     }
+    #endregion
 }
