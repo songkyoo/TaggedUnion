@@ -457,14 +457,24 @@ internal static class UnionContextFactory
         {
             return typeSymbol switch
             {
-                INamedTypeSymbol namedTypeSymbol when namedTypeSymbol.SpecialType != SpecialType.None
+                INamedTypeSymbol
+                {
+                    OriginalDefinition.SpecialType: System_Nullable_T,
+                    TypeArguments.Length: 1,
+                } namedTypeSymbol
+                    => GetCaseParamBaseName(namedTypeSymbol.TypeArguments[0]),
+
+                INamedTypeSymbol
+                {
+                    SpecialType: not SpecialType.None,
+                } namedTypeSymbol
                     => ToDisplayString(namedTypeSymbol),
 
                 INamedTypeSymbol namedTypeSymbol
                     => namedTypeSymbol.Name,
 
                 IArrayTypeSymbol arrayTypeSymbol
-                    => ToDisplayString(arrayTypeSymbol.ElementType) + "Array",
+                    => GetCaseParamBaseName(arrayTypeSymbol.ElementType) + "Array",
 
                 _
                     => ToDisplayString(typeSymbol),

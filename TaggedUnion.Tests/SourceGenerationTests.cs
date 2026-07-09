@@ -507,4 +507,25 @@ public sealed class SourceGenerationTests
             ]
         );
     }
+
+    [Test]
+    public void NullableCaseParameterNameRemovesNullableAnnotation()
+    {
+        AssertGeneratedCodeContains(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(typeof(int?[]), typeof(string))]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedFragments:
+            [
+                "global::System.Action<int?[]> intArray",
+                "global::System.Func<int?[], TResult> intArray"
+            ]
+        );
+    }
 }
