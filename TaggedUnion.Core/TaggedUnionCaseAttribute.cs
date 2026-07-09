@@ -10,13 +10,16 @@ public sealed class TaggedUnionCaseAttribute : Attribute
     public Type Type { get; }
 
     public string? ParamName { get; }
+
+    public int Tag { get; }
     #endregion
 
     #region Constructors
-    public TaggedUnionCaseAttribute(Type type, string? paramName = null)
+    public TaggedUnionCaseAttribute(Type type, string? paramName = null, int tag = 0)
     {
         Type = type;
         ParamName = paramName;
+        Tag = tag;
     }
     #endregion
 }

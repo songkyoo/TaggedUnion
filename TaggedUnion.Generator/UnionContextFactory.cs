@@ -28,7 +28,8 @@ internal static class UnionContextFactory
         Location TypeLocation,
         string? ParamName,
         Location ParamNameLocation,
-        bool IsParamNameValid
+        bool IsParamNameValid,
+        int? Tag
     );
     #endregion
 
@@ -88,7 +89,7 @@ internal static class UnionContextFactory
             diagnosticsBuilder
         );
 
-        caseCandidates = ApplyCaseAttributeParamNames(
+        caseCandidates = ApplyCaseAttributes(
             caseCandidates,
             attributeMap: CreateCaseAttributeMap(caseAttributes)
         );
@@ -106,15 +107,14 @@ internal static class UnionContextFactory
 
         var caseContextsBuilder = ImmutableArray.CreateBuilder<UnionCaseContext>();
 
-        for (var i = 0; i < caseCandidates.Length; i++)
+        foreach (var caseCandidate in caseCandidates)
         {
-            var unionCaseCandidate = caseCandidates[i];
-            var caseTypeSymbol = unionCaseCandidate.TypeSymbol;
+            var caseTypeSymbol = caseCandidate.TypeSymbol;
             var caseContext = new UnionCaseContext(
                 StorageKind: GetCaseStorageKind(caseTypeSymbol),
-                Tag: i + 1,
                 FullyQualifiedTypeName: GetCaseTypeName(caseTypeSymbol),
-                ParamName: unionCaseCandidate.ParamName
+                ParamName: caseCandidate.ParamName,
+                Tag: caseCandidate.Tag
             );
 
             caseContextsBuilder.Add(caseContext);
@@ -142,39 +142,46 @@ internal static class UnionContextFactory
 
             foreach (var attribute in attributes)
             {
-                if (string.IsNullOrWhiteSpace(attribute.ParamName))
-                {
-                    continue;
-                }
-
                 taggedUnionCaseAttributeMapBuilder[attribute.TypeSymbol] = attribute;
             }
 
             return taggedUnionCaseAttributeMapBuilder.ToImmutable();
         }
 
-        static ImmutableArray<UnionCaseCandidateContext> ApplyCaseAttributeParamNames(
+        static ImmutableArray<UnionCaseCandidateContext> ApplyCaseAttributes(
             ImmutableArray<UnionCaseCandidateContext> candidates,
             ImmutableDictionary<ITypeSymbol, TaggedUnionCaseAttributeContext> attributeMap
         )
         {
             var builder = ImmutableArray.CreateBuilder<UnionCaseCandidateContext>(candidates.Length);
 
-            foreach (var unionCaseCandidate in candidates)
+            foreach (var candidate in candidates)
             {
-                if (attributeMap.TryGetValue(unionCaseCandidate.TypeSymbol, out var caseAttribute))
+                if (attributeMap.TryGetValue(candidate.TypeSymbol, out var caseAttribute))
                 {
-                    builder.Add(unionCaseCandidate with
+                    var candidateWithTag = caseAttribute.Tag != null
+                        ? candidate with
+                        {
+                            Tag = caseAttribute.Tag.Value,
+                        }
+                        : candidate;
+
+                    if (!string.IsNullOrWhiteSpace(caseAttribute.ParamName))
                     {
-                        ParamName = caseAttribute.ParamName!,
-                        ParamNameLocation = caseAttribute.ParamNameLocation,
-                        IsParamNameExplicit = true,
-                        IsParamNameValid = caseAttribute.IsParamNameValid,
-                    });
+                        candidateWithTag = candidateWithTag with
+                        {
+                            ParamName = caseAttribute.ParamName!,
+                            ParamNameLocation = caseAttribute.ParamNameLocation,
+                            IsParamNameExplicit = true,
+                            IsParamNameValid = caseAttribute.IsParamNameValid,
+                        };
+                    }
+
+                    builder.Add(candidateWithTag);
                 }
                 else
                 {
-                    builder.Add(unionCaseCandidate);
+                    builder.Add(candidate);
                 }
             }
 
@@ -257,8 +264,14 @@ internal static class UnionContextFactory
 
         foreach (var attribute in attributes)
         {
-            if (attribute.ConstructorArguments.Length < 1
-                || attribute.ConstructorArguments[0] is not
+            if (attribute.ConstructorArguments.Length != 3)
+            {
+                attributeContexts = default;
+
+                return false;
+            }
+
+            if (attribute.ConstructorArguments[0] is not
                 {
                     Kind: TypedConstantKind.Type,
                     Value: ITypeSymbol typeSymbol,
@@ -271,24 +284,27 @@ internal static class UnionContextFactory
                 return false;
             }
 
+            var paramNameValue = attribute.ConstructorArguments[1].Value;
             string? paramName = null;
             var isParamNameValid = true;
 
-            if (attribute.ConstructorArguments.Length > 1)
+            if (paramNameValue is string value)
             {
-                var paramNameValue = attribute.ConstructorArguments[1].Value;
+                paramName = EscapeIdentifier(value);
+                isParamNameValid = IsValidParameterName(value);
+            }
+            else if (paramNameValue != null)
+            {
+                attributeContexts = default;
 
-                if (paramNameValue is string value)
-                {
-                    paramName = EscapeIdentifier(value);
-                    isParamNameValid = IsValidParameterName(value);
-                }
-                else if (paramNameValue != null)
-                {
-                    attributeContexts = default;
+                return false;
+            }
 
-                    return false;
-                }
+            if (attribute.ConstructorArguments[2].Value is not int tag)
+            {
+                attributeContexts = default;
+
+                return false;
             }
 
             builder.Add(new TaggedUnionCaseAttributeContext(
@@ -296,7 +312,8 @@ internal static class UnionContextFactory
                 TypeLocation: GetCaseAttributeTypeLocation(attribute, cancellationToken),
                 ParamName: paramName,
                 ParamNameLocation: GetCaseAttributeParamNameLocation(attribute, cancellationToken),
-                IsParamNameValid: isParamNameValid
+                IsParamNameValid: isParamNameValid,
+                Tag: tag != 0 ? tag : null
             ));
         }
 
@@ -367,7 +384,8 @@ internal static class UnionContextFactory
                 ParamName: GetCaseParamName(typeSymbol),
                 ParamNameLocation: attributeSyntax.ArgumentList!.Arguments[i].GetLocation(),
                 IsParamNameExplicit: false,
-                IsParamNameValid: true
+                IsParamNameValid: true,
+                Tag: i + 1
             ));
         }
 

@@ -1120,6 +1120,31 @@ public sealed class SourceGenerationTests
     }
 
     [Test]
+    public void CaseAttributeOverridesCaseTag()
+    {
+        AssertGeneratedCodeContains(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnionCase(typeof(int), tag: 42)]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedFragments:
+            [
+                "public int Value42;",
+                "_tag = 42;",
+                "if (_tag != 42)",
+                "case 42: @int(",
+                "42 => @int("
+            ]
+        );
+    }
+
+    [Test]
     public void CaseAttributeOverridesCaseParameterName()
     {
         AssertGeneratedCodeContains(

@@ -9,5 +9,6 @@ internal sealed record UnionCaseCandidateContext(
     string ParamName,
     Location ParamNameLocation,
     bool IsParamNameExplicit,
-    bool IsParamNameValid
+    bool IsParamNameValid,
+    int Tag
 );
