@@ -21,7 +21,9 @@ internal static class UnionContextFactory
 
     #region Types
     private sealed record TaggedUnionCaseAttributeContext(
-        string ParamName,
+        ITypeSymbol TypeSymbol,
+        Location TypeLocation,
+        string? ParamName,
         Location ParamNameLocation,
         bool IsParamNameValid
     );
@@ -51,15 +53,17 @@ internal static class UnionContextFactory
             return new UnionValidationResult.Failure(ImmutableArray<Diagnostic>.Empty);
         }
 
-        var caseAttributeMap = CreateCaseAttributeMap(
+        if (!TryGetCaseAttributeContexts(
             attributes: context
                 .TargetSymbol
                 .GetAttributes()
                 .Where(x => x.AttributeClass?.ToDisplayString() == TaggedUnionCaseAttributeString),
-            cancellationToken
-        );
-
-        caseCandidates = ApplyCaseAttributeParamNames(caseCandidates, caseAttributeMap);
+            cancellationToken,
+            out var caseAttributes
+        ))
+        {
+            return new UnionValidationResult.Failure(ImmutableArray<Diagnostic>.Empty);
+        }
 
         var diagnosticsBuilder = ImmutableArray.CreateBuilder<Diagnostic>();
         var isValid = true;
@@ -74,6 +78,18 @@ internal static class UnionContextFactory
             diagnosticsBuilder,
             cancellationToken
         );
+        isValid &= ValidateCaseAttributes(
+            structDeclarationSyntax,
+            caseCandidates,
+            caseAttributes,
+            diagnosticsBuilder
+        );
+
+        caseCandidates = ApplyCaseAttributeParamNames(
+            caseCandidates,
+            attributeMap: CreateCaseAttributeMap(caseAttributes)
+        );
+
         isValid &= ValidateCaseTypes(
             structDeclarationSyntax,
             caseCandidates,
@@ -112,8 +128,7 @@ internal static class UnionContextFactory
 
         #region Local Functions
         static ImmutableDictionary<ITypeSymbol, TaggedUnionCaseAttributeContext> CreateCaseAttributeMap(
-            IEnumerable<AttributeData> attributes,
-            CancellationToken cancellationToken
+            ImmutableArray<TaggedUnionCaseAttributeContext> attributes
         )
         {
             var taggedUnionCaseAttributeMapBuilder =
@@ -123,23 +138,12 @@ internal static class UnionContextFactory
 
             foreach (var attribute in attributes)
             {
-                if (attribute.ConstructorArguments.Length < 2
-                    || attribute.ConstructorArguments[0] is not
-                    {
-                        Kind: TypedConstantKind.Type,
-                        Value: ITypeSymbol typeSymbol,
-                    }
-                    || attribute.ConstructorArguments[1].Value is not string paramName
-                )
+                if (string.IsNullOrWhiteSpace(attribute.ParamName))
                 {
                     continue;
                 }
 
-                taggedUnionCaseAttributeMapBuilder[typeSymbol] = new TaggedUnionCaseAttributeContext(
-                    ParamName: EscapeIdentifier(paramName),
-                    ParamNameLocation: GetCaseAttributeParamNameLocation(attribute, cancellationToken),
-                    IsParamNameValid: IsValidParameterName(paramName)
-                );
+                taggedUnionCaseAttributeMapBuilder[attribute.TypeSymbol] = attribute;
             }
 
             return taggedUnionCaseAttributeMapBuilder.ToImmutable();
@@ -158,7 +162,7 @@ internal static class UnionContextFactory
                 {
                     builder.Add(unionCaseCandidate with
                     {
-                        ParamName = caseAttribute.ParamName,
+                        ParamName = caseAttribute.ParamName!,
                         ParamNameLocation = caseAttribute.ParamNameLocation,
                         IsParamNameExplicit = true,
                         IsParamNameValid = caseAttribute.IsParamNameValid,
@@ -171,6 +175,92 @@ internal static class UnionContextFactory
             }
 
             return builder.ToImmutable();
+        }
+
+        static UnionCaseStorageKind GetCaseStorageKind(ITypeSymbol typeSymbol)
+        {
+            return typeSymbol switch
+            {
+                { IsReferenceType: true } => Reference,
+                { IsUnmanagedType: true } => Unmanaged,
+                { IsValueType: true } => Managed,
+                _ => throw new InvalidOperationException($"Cannot determine the storage kind for type '{typeSymbol.ToDisplayString()}'."),
+            };
+        }
+        #endregion
+    }
+
+    private static bool TryGetCaseAttributeContexts(
+        IEnumerable<AttributeData> attributes,
+        CancellationToken cancellationToken,
+        out ImmutableArray<TaggedUnionCaseAttributeContext> attributeContexts
+    )
+    {
+        var builder = ImmutableArray.CreateBuilder<TaggedUnionCaseAttributeContext>();
+
+        foreach (var attribute in attributes)
+        {
+            if (attribute.ConstructorArguments.Length < 1
+                || attribute.ConstructorArguments[0] is not
+                {
+                    Kind: TypedConstantKind.Type,
+                    Value: ITypeSymbol typeSymbol,
+                }
+                || typeSymbol is IErrorTypeSymbol
+            )
+            {
+                attributeContexts = default;
+
+                return false;
+            }
+
+            string? paramName = null;
+            var isParamNameValid = true;
+
+            if (attribute.ConstructorArguments.Length > 1)
+            {
+                var paramNameValue = attribute.ConstructorArguments[1].Value;
+
+                if (paramNameValue is string value)
+                {
+                    paramName = EscapeIdentifier(value);
+                    isParamNameValid = IsValidParameterName(value);
+                }
+                else if (paramNameValue != null)
+                {
+                    attributeContexts = default;
+
+                    return false;
+                }
+            }
+
+            builder.Add(new TaggedUnionCaseAttributeContext(
+                TypeSymbol: typeSymbol,
+                TypeLocation: GetCaseAttributeTypeLocation(attribute, cancellationToken),
+                ParamName: paramName,
+                ParamNameLocation: GetCaseAttributeParamNameLocation(attribute, cancellationToken),
+                IsParamNameValid: isParamNameValid
+            ));
+        }
+
+        attributeContexts = builder.ToImmutable();
+
+        return true;
+
+        #region Local Functions
+        static Location GetCaseAttributeTypeLocation(
+            AttributeData attribute,
+            CancellationToken cancellationToken
+        )
+        {
+            var attributeSyntax = attribute.ApplicationSyntaxReference?.GetSyntax(cancellationToken) as AttributeSyntax;
+
+            if (attributeSyntax?.ArgumentList is { Arguments.Count: > 0 })
+            {
+                return attributeSyntax.ArgumentList.Arguments[0].Expression.GetLocation();
+            }
+
+            return attributeSyntax?.GetLocation() ?? Location.None;
         }
 
         static Location GetCaseAttributeParamNameLocation(
@@ -186,17 +276,6 @@ internal static class UnionContextFactory
             }
 
             return attributeSyntax?.GetLocation() ?? Location.None;
-        }
-
-        static UnionCaseStorageKind GetCaseStorageKind(ITypeSymbol typeSymbol)
-        {
-            return typeSymbol switch
-            {
-                { IsReferenceType: true } => Reference,
-                { IsUnmanagedType: true } => Unmanaged,
-                { IsValueType: true } => Managed,
-                _ => throw new InvalidOperationException($"Cannot determine the storage kind for type '{typeSymbol.ToDisplayString()}'."),
-            };
         }
         #endregion
     }
@@ -301,6 +380,36 @@ internal static class UnionContextFactory
         }
 
         return true;
+    }
+
+    private static bool ValidateCaseAttributes(
+        StructDeclarationSyntax structDeclarationSyntax,
+        ImmutableArray<UnionCaseCandidateContext> candidates,
+        ImmutableArray<TaggedUnionCaseAttributeContext> attributes,
+        ImmutableArray<Diagnostic>.Builder diagnosticsBuilder
+    )
+    {
+        var knownTypes = candidates
+            .Select(x => x.TypeSymbol)
+            .ToImmutableHashSet(SymbolEqualityComparer.Default);
+        var unmatchedAttributeContexts = attributes
+            .Where(x => !knownTypes.Contains(x.TypeSymbol))
+            .ToImmutableArray();
+
+        foreach (var context in unmatchedAttributeContexts)
+        {
+            diagnosticsBuilder.Add(Diagnostic.Create(
+                descriptor: TaggedUnionDiagnostics.CaseAttributeTypeMustMatchCaseTypeRule,
+                location: context.TypeLocation,
+                messageArgs:
+                [
+                    context.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                    structDeclarationSyntax.Identifier,
+                ]
+            ));
+        }
+
+        return unmatchedAttributeContexts.Length == 0;
     }
 
     private static bool ValidateCaseTypes(

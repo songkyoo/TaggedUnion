@@ -283,6 +283,82 @@ public sealed class DiagnosticTests
     }
 
     [Test]
+    public void CaseAttributeTypeNotSpecifiedInTaggedUnion()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public class Qux
+            {
+            }
+
+            public class Baz
+            {
+            }
+
+            [TaggedUnion(typeof(Qux), typeof(string))]
+            [TaggedUnionCase(typeof(Baz), "baz")]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0008",
+            expectedLocationText: "typeof(Baz)"
+        );
+    }
+
+    [Test]
+    public void CaseAttributeTypeNotSpecifiedInTaggedUnionWithoutParamName()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public class Qux
+            {
+            }
+
+            public class Baz
+            {
+            }
+
+            [TaggedUnion(typeof(Qux), typeof(string))]
+            [TaggedUnionCase(typeof(Baz))]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0008",
+            expectedLocationText: "typeof(Baz)"
+        );
+    }
+
+    [Test]
+    public void UnresolvedCaseAttributeType()
+    {
+        AssertDiagnostic(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public class Qux
+            {
+            }
+
+            [TaggedUnion(typeof(Qux), typeof(string))]
+            [TaggedUnionCase(typeof(Missing), "missing")]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "CS0246"
+        );
+    }
+
+    [Test]
     public void MultipleCaseTypeDiagnostics()
     {
         AssertDiagnostics(

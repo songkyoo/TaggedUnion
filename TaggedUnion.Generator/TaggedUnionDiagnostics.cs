@@ -66,4 +66,13 @@ internal static class TaggedUnionDiagnostics
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
+
+    public static readonly DiagnosticDescriptor CaseAttributeTypeMustMatchCaseTypeRule = new(
+        id: "MTU0008",
+        title: "TaggedUnionCase type must match a case type",
+        messageFormat: "TaggedUnionCase type '{0}' is not specified in tagged union target type '{1}'.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
 }
