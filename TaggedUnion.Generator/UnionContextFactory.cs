@@ -35,7 +35,7 @@ internal static class UnionContextFactory
     {
         var taggedUnionAttribute = context.Attributes[0];
 
-        if (!TryGetUnionCaseCandidates(taggedUnionAttribute, cancellationToken, out var unionCaseCandidates))
+        if (!TryGetUnionCaseCandidates(taggedUnionAttribute, cancellationToken, out var caseCandidates))
         {
             return new UnionValidationResult.Failure(ImmutableArray<Diagnostic>.Empty);
         }
@@ -52,14 +52,14 @@ internal static class UnionContextFactory
         }
 
         var caseAttributeMap = CreateCaseAttributeMap(
-            taggedUnionCaseAttributes: context
+            attributes: context
                 .TargetSymbol
                 .GetAttributes()
                 .Where(x => x.AttributeClass?.ToDisplayString() == TaggedUnionCaseAttributeString),
             cancellationToken
         );
 
-        unionCaseCandidates = ApplyCaseAttributeParamNames(unionCaseCandidates, caseAttributeMap);
+        caseCandidates = ApplyCaseAttributeParamNames(caseCandidates, caseAttributeMap);
 
         var diagnosticsBuilder = ImmutableArray.CreateBuilder<Diagnostic>();
         var isValid = true;
@@ -76,7 +76,7 @@ internal static class UnionContextFactory
         );
         isValid &= ValidateCaseTypes(
             structDeclarationSyntax,
-            unionCaseCandidates,
+            caseCandidates,
             diagnosticsBuilder
         );
 
@@ -87,16 +87,12 @@ internal static class UnionContextFactory
 
         var caseContextsBuilder = ImmutableArray.CreateBuilder<UnionCaseContext>();
 
-        for (var i = 0; i < unionCaseCandidates.Length; i++)
+        for (var i = 0; i < caseCandidates.Length; i++)
         {
-            var unionCaseCandidate = unionCaseCandidates[i];
+            var unionCaseCandidate = caseCandidates[i];
             var caseTypeSymbol = unionCaseCandidate.TypeSymbol;
             var caseContext = new UnionCaseContext(
-                StorageKind: caseTypeSymbol.IsReferenceType
-                    ? Reference
-                    : caseTypeSymbol.IsUnmanagedType
-                    ? Unmanaged
-                    : throw new InvalidOperationException($"Cannot determine the storage kind for type '{caseTypeSymbol.ToDisplayString()}'."),
+                StorageKind: GetCaseStorageKind(caseTypeSymbol),
                 Tag: i + 1,
                 FullyQualifiedTypeName: GetCaseTypeName(caseTypeSymbol),
                 ParamName: unionCaseCandidate.ParamName
@@ -116,7 +112,7 @@ internal static class UnionContextFactory
 
         #region Local Functions
         static ImmutableDictionary<ITypeSymbol, TaggedUnionCaseAttributeContext> CreateCaseAttributeMap(
-            IEnumerable<AttributeData> taggedUnionCaseAttributes,
+            IEnumerable<AttributeData> attributes,
             CancellationToken cancellationToken
         )
         {
@@ -125,7 +121,7 @@ internal static class UnionContextFactory
                     SymbolEqualityComparer.Default
                 );
 
-            foreach (var attribute in taggedUnionCaseAttributes)
+            foreach (var attribute in attributes)
             {
                 if (attribute.ConstructorArguments.Length < 2
                     || attribute.ConstructorArguments[0] is not
@@ -150,15 +146,15 @@ internal static class UnionContextFactory
         }
 
         static ImmutableArray<UnionCaseCandidateContext> ApplyCaseAttributeParamNames(
-            ImmutableArray<UnionCaseCandidateContext> unionCaseCandidates,
-            ImmutableDictionary<ITypeSymbol, TaggedUnionCaseAttributeContext> caseAttributeMap
+            ImmutableArray<UnionCaseCandidateContext> candidates,
+            ImmutableDictionary<ITypeSymbol, TaggedUnionCaseAttributeContext> attributeMap
         )
         {
-            var builder = ImmutableArray.CreateBuilder<UnionCaseCandidateContext>(unionCaseCandidates.Length);
+            var builder = ImmutableArray.CreateBuilder<UnionCaseCandidateContext>(candidates.Length);
 
-            foreach (var unionCaseCandidate in unionCaseCandidates)
+            foreach (var unionCaseCandidate in candidates)
             {
-                if (caseAttributeMap.TryGetValue(unionCaseCandidate.TypeSymbol, out var caseAttribute))
+                if (attributeMap.TryGetValue(unionCaseCandidate.TypeSymbol, out var caseAttribute))
                 {
                     builder.Add(unionCaseCandidate with
                     {
@@ -191,13 +187,22 @@ internal static class UnionContextFactory
 
             return attributeSyntax?.GetLocation() ?? Location.None;
         }
+
+        static UnionCaseStorageKind GetCaseStorageKind(ITypeSymbol typeSymbol)
+        {
+            return typeSymbol.IsReferenceType
+                ? Reference
+                : typeSymbol.IsUnmanagedType
+                    ? Unmanaged
+                    : throw new InvalidOperationException($"Cannot determine the storage kind for type '{typeSymbol.ToDisplayString()}'.");
+        }
         #endregion
     }
 
     private static bool TryGetUnionCaseCandidates(
         AttributeData attribute,
         CancellationToken cancellationToken,
-        out ImmutableArray<UnionCaseCandidateContext> unionCaseCandidateContexts
+        out ImmutableArray<UnionCaseCandidateContext> candidateContexts
     )
     {
         var builder = ImmutableArray.CreateBuilder<UnionCaseCandidateContext>(attribute.ConstructorArguments.Length);
@@ -213,7 +218,7 @@ internal static class UnionContextFactory
                 || typeSymbol is IErrorTypeSymbol
             )
             {
-                unionCaseCandidateContexts = default;
+                candidateContexts = default;
 
                 return false;
             }
@@ -228,7 +233,7 @@ internal static class UnionContextFactory
             ));
         }
 
-        unionCaseCandidateContexts = builder.ToImmutable();
+        candidateContexts = builder.ToImmutable();
 
         return true;
     }
@@ -298,7 +303,7 @@ internal static class UnionContextFactory
 
     private static bool ValidateCaseTypes(
         StructDeclarationSyntax structDeclarationSyntax,
-        ImmutableArray<UnionCaseCandidateContext> unionCaseCandidates,
+        ImmutableArray<UnionCaseCandidateContext> candidates,
         ImmutableArray<Diagnostic>.Builder diagnosticsBuilder
     )
     {
@@ -309,7 +314,7 @@ internal static class UnionContextFactory
         var knownTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
         var knownParameterNames = new Dictionary<string, UnionCaseCandidateContext>(StringComparer.Ordinal);
 
-        foreach (var candidate in unionCaseCandidates)
+        foreach (var candidate in candidates)
         {
             var typeSymbol = candidate.TypeSymbol;
             var isSupportedCaseType = IsSupportedCaseType(typeSymbol);
