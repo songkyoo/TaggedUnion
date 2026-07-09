@@ -56,6 +56,18 @@ internal sealed class TaggedUnionSourceWriter
         }
         #endregion
     }
+
+    private static string GetValueAccessorString(UnionCaseContext context)
+    {
+        var storageKind = context.StorageKind;
+
+        return storageKind switch
+        {
+            Reference => "_reference",
+            Unmanaged => $"_unmanaged.Value{context.Tag}",
+            _ => throw new InvalidOperationException($"Invalid storage kind: {storageKind}")
+        };
+    }
     #endregion
 
     #region Fields
@@ -110,6 +122,15 @@ internal sealed class TaggedUnionSourceWriter
 
         IncreaseIndent();
 
+        // types
+        if (_context.CaseContexts.Any(context => context.StorageKind == Unmanaged))
+        {
+            AppendLine("#region Types");
+            WriteUnmanagedTypeDeclaration();
+            AppendLine("#endregion");
+            AppendLine();
+        }
+
         // operator overloads
         WriteOperatorOverloads();
         AppendLine();
@@ -163,6 +184,25 @@ internal sealed class TaggedUnionSourceWriter
         }
 
         return _builder.ToString();
+    }
+
+    private void WriteUnmanagedTypeDeclaration()
+    {
+        AppendLine("[global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Explicit)]");
+        AppendLine("private struct Unmanaged");
+        AppendLine("{");
+
+        foreach (var context in _context.CaseContexts)
+        {
+            if (context.StorageKind != Unmanaged)
+            {
+                continue;
+            }
+
+            AppendLine($"{Indent}[global::System.Runtime.InteropServices.FieldOffset(0)] public {context.FullyQualifiedTypeName} Value{context.Tag};");
+        }
+
+        AppendLine("}");
     }
 
     private void WriteOperatorOverloads()
@@ -235,6 +275,11 @@ internal sealed class TaggedUnionSourceWriter
             AppendLine("private readonly object? _reference;");
         }
 
+        if (caseContexts.Any(x => x.StorageKind == Unmanaged))
+        {
+            AppendLine("private readonly Unmanaged _unmanaged;");
+        }
+
         AppendLine("#endregion");
     }
 
@@ -248,11 +293,13 @@ internal sealed class TaggedUnionSourceWriter
         for (var i = 0; i < caseContexts.Length; i++)
         {
             var caseContext = caseContexts[i];
+            var storageKind = caseContext.StorageKind;
+            var tag = caseContext.Tag;
 
             AppendLine($"public {typeName}({caseContext.FullyQualifiedTypeName} value)");
             AppendLine("{");
 
-            if (caseContext.StorageKind == Reference)
+            if (storageKind == Reference)
             {
                 AppendLine($"{Indent}if ((object?)value == null)");
                 AppendLine($"{Indent}{{");
@@ -261,12 +308,8 @@ internal sealed class TaggedUnionSourceWriter
                 AppendLine();
             }
 
-            AppendLine($"{Indent}_tag = {caseContext.Tag};");
-
-            if (caseContext.StorageKind == Reference)
-            {
-                AppendLine($"{Indent}_reference = value;");
-            }
+            AppendLine($"{Indent}_tag = {tag};");
+            AppendLine($"{Indent}{GetValueAccessorString(caseContext)} = value;");
 
             AppendLine("}");
 
@@ -290,19 +333,7 @@ internal sealed class TaggedUnionSourceWriter
 
         foreach (var caseContext in _context.CaseContexts)
         {
-            var storageKind = caseContext.StorageKind;
-
-            switch (storageKind)
-            {
-                case Reference:
-                {
-                    AppendLine($"{Indent}{caseContext.Tag} => _reference,");
-
-                    break;
-                }
-                default:
-                    throw new InvalidOperationException($"Invalid storage kind: {storageKind}");
-            }
+            AppendLine($"{Indent}{caseContext.Tag} => {GetValueAccessorString(caseContext)},");
         }
 
         AppendLine($"{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{_tag}}\"),");
@@ -328,26 +359,26 @@ internal sealed class TaggedUnionSourceWriter
 
         foreach (var caseContext in _context.CaseContexts)
         {
-            var storageKind = caseContext.StorageKind;
-            var caseTypeName = caseContext.FullyQualifiedTypeName;
-
-            switch (storageKind)
-            {
-                case Reference:
-                {
-                    AppendLine($"{Indent}{Indent}{caseContext.Tag} => global::System.Collections.Generic.EqualityComparer<{caseTypeName}>.Default.Equals(({caseTypeName})_reference!, ({caseTypeName})other._reference!),");
-
-                    break;
-                }
-                default:
-                    throw new InvalidOperationException($"Invalid storage kind: {storageKind}");
-            }
+            AppendLine(GetComparisonExpression(caseContext));
         }
 
         AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{_tag}}\"),");
         AppendLine($"{Indent}}};");
         AppendLine("}");
         AppendLine("#endregion");
+
+        #region Local Functions
+        static string GetComparisonExpression(UnionCaseContext context)
+        {
+            var tag = context.Tag;
+            var caseTypeName = context.FullyQualifiedTypeName;
+            var nullForgivingAnnotation = context.StorageKind == Reference ? "!" : "";
+            var castString = context.StorageKind == Reference ? $"({caseTypeName})" : "";
+            var getValueString = $"{GetValueAccessorString(context)}{nullForgivingAnnotation}";
+
+            return $"{Indent}{Indent}{tag} => global::System.Collections.Generic.EqualityComparer<{caseTypeName}>.Default.Equals({castString}{getValueString}, {castString}other.{getValueString}),";
+        }
+        #endregion
     }
 
     private void WriteOverrides()
@@ -372,19 +403,7 @@ internal sealed class TaggedUnionSourceWriter
 
         foreach (var caseContext in _context.CaseContexts)
         {
-            var storageKind = caseContext.StorageKind;
-
-            switch (storageKind)
-            {
-                case Reference:
-                {
-                    AppendLine($"{Indent}{Indent}{caseContext.Tag} => global::System.HashCode.Combine(_tag, _reference),");
-
-                    break;
-                }
-                default:
-                    throw new InvalidOperationException($"Invalid storage kind: {storageKind}");
-            }
+            AppendLine($"{Indent}{Indent}{caseContext.Tag} => global::System.HashCode.Combine(_tag, {GetValueAccessorString(caseContext)}),");
         }
 
         AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{_tag}}\"),");
@@ -401,19 +420,7 @@ internal sealed class TaggedUnionSourceWriter
 
         foreach (var caseContext in _context.CaseContexts)
         {
-            var storageKind = caseContext.StorageKind;
-
-            switch (storageKind)
-            {
-                case Reference:
-                {
-                    AppendLine($"{Indent}{Indent}{caseContext.Tag} => $\"{{_reference}}\",");
-
-                    break;
-                }
-                default:
-                    throw new InvalidOperationException($"Invalid storage kind: {storageKind}");
-            }
+            AppendLine($"{Indent}{Indent}{caseContext.Tag} => $\"{{{GetValueAccessorString(caseContext)}}}\",");
         }
 
         AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{_tag}}\"),");
@@ -430,13 +437,18 @@ internal sealed class TaggedUnionSourceWriter
         // TryGet
         foreach (var caseContext in _context.CaseContexts)
         {
-            var storageKind = caseContext.StorageKind;
+            var tag = caseContext.Tag;
             var caseTypeName = caseContext.FullyQualifiedTypeName;
+            var notNullWhenAnnotationString = caseContext.StorageKind == Reference
+                ? "[global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] "
+                : "";
             var nullableAnnotation = caseContext.StorageKind == Reference ? "?" : "";
+            var castString = caseContext.StorageKind == Reference ? $"({caseTypeName})" : "";
+            var nullForgivingAnnotation = caseContext.StorageKind == Reference ? "!" : "";
 
-            AppendLine($"public bool TryGetValue([global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] out {caseTypeName}{nullableAnnotation} value)");
+            AppendLine($"public bool TryGetValue({notNullWhenAnnotationString}out {caseTypeName}{nullableAnnotation} value)");
             AppendLine("{");
-            AppendLine($"{Indent}if (_tag != {caseContext.Tag})");
+            AppendLine($"{Indent}if (_tag != {tag})");
             AppendLine($"{Indent}{{");
             AppendLine($"{Indent}{Indent}value = default;");
             AppendLine();
@@ -444,19 +456,7 @@ internal sealed class TaggedUnionSourceWriter
             AppendLine($"{Indent}}}");
             AppendLine($"{Indent}else");
             AppendLine($"{Indent}{{");
-
-            switch (storageKind)
-            {
-                case Reference:
-                {
-                    AppendLine($"{Indent}{Indent}value = ({caseTypeName})_reference!;");
-
-                    break;
-                }
-                default:
-                    throw new InvalidOperationException($"Invalid storage kind: {storageKind}");
-            }
-
+            AppendLine($"{Indent}{Indent}value = {castString}{GetValueAccessorString(caseContext)}{nullForgivingAnnotation};");
             AppendLine();
             AppendLine($"{Indent}{Indent}return true;");
             AppendLine($"{Indent}}}");
@@ -484,21 +484,13 @@ internal sealed class TaggedUnionSourceWriter
 
         foreach (var caseContext in _context.CaseContexts)
         {
-            var storageKind = caseContext.StorageKind;
-            var typeName = caseContext.FullyQualifiedTypeName;
+            var tag = caseContext.Tag;
+            var caseTypeName = caseContext.FullyQualifiedTypeName;
             var paramName = caseContext.ParamName;
+            var castString = caseContext.StorageKind == Reference ? $"({caseTypeName})" : "";
+            var nullForgivingAnnotation = caseContext.StorageKind == Reference ? "!" : "";
 
-            switch (storageKind)
-            {
-                case Reference:
-                {
-                    AppendLine($"{Indent}{Indent}case {caseContext.Tag}: {paramName}(({typeName})_reference!); return;");
-
-                    break;
-                }
-                default:
-                    throw new InvalidOperationException($"Invalid storage kind: {storageKind}");
-            }
+            AppendLine($"{Indent}{Indent}case {tag}: {paramName}({castString}{GetValueAccessorString(caseContext)}{nullForgivingAnnotation}); return;");
         }
 
         AppendLine($"{Indent}{Indent}default: throw new global::System.InvalidOperationException($\"Invalid tag: {{_tag}}\");");
@@ -525,21 +517,12 @@ internal sealed class TaggedUnionSourceWriter
 
         foreach (var caseContext in _context.CaseContexts)
         {
-            var storageKind = caseContext.StorageKind;
-            var typeName = caseContext.FullyQualifiedTypeName;
+            var caseTypeName = caseContext.FullyQualifiedTypeName;
             var paramName = caseContext.ParamName;
+            var castString = caseContext.StorageKind == Reference ? $"({caseTypeName})" : "";
+            var nullForgivingAnnotation = caseContext.StorageKind == Reference ? "!" : "";
 
-            switch (storageKind)
-            {
-                case Reference:
-                {
-                    AppendLine($"{Indent}{Indent}{caseContext.Tag} => {paramName}(({typeName})_reference!),");
-
-                    break;
-                }
-                default:
-                    throw new InvalidOperationException($"Invalid storage kind: {storageKind}");
-            }
+            AppendLine($"{Indent}{Indent}{caseContext.Tag} => {paramName}({castString}{GetValueAccessorString(caseContext)}{nullForgivingAnnotation}),");
         }
 
         AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{_tag}}\"),");

@@ -5,4 +5,5 @@ internal enum UnionCaseStorageKind
     None,
 
     Reference,
+    Unmanaged,
 }

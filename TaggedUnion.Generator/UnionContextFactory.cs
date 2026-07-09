@@ -95,6 +95,8 @@ internal static class UnionContextFactory
                 TypeSymbol: caseTypeSymbol,
                 StorageKind: caseTypeSymbol.IsReferenceType
                     ? Reference
+                    : caseTypeSymbol.IsUnmanagedType
+                    ? Unmanaged
                     : throw new InvalidOperationException($"Cannot determine the storage kind for type '{caseTypeSymbol.ToDisplayString()}'."),
                 Tag: i + 1,
                 FullyQualifiedTypeName: GetCaseTypeName(caseTypeSymbol),
@@ -436,7 +438,7 @@ internal static class UnionContextFactory
 
     private static string GetCaseParamName(ITypeSymbol typeSymbol)
     {
-        var originalName = typeSymbol.Name;
+        var originalName = GetCaseParamBaseName(typeSymbol);
 
         if (originalName.Length > 2
             && typeSymbol.TypeKind == Interface
@@ -448,6 +450,33 @@ internal static class UnionContextFactory
         }
 
         return EscapeIdentifier(GetCamelCaseName(originalName));
+
+        #region Local Functions
+
+        static string GetCaseParamBaseName(ITypeSymbol typeSymbol)
+        {
+            return typeSymbol switch
+            {
+                INamedTypeSymbol namedTypeSymbol when namedTypeSymbol.SpecialType != SpecialType.None
+                    => ToDisplayString(namedTypeSymbol),
+
+                INamedTypeSymbol namedTypeSymbol
+                    => namedTypeSymbol.Name,
+
+                IArrayTypeSymbol arrayTypeSymbol
+                    => ToDisplayString(arrayTypeSymbol.ElementType) + "Array",
+
+                _
+                    => ToDisplayString(typeSymbol),
+            };
+        }
+
+        static string ToDisplayString(ITypeSymbol typeSymbol)
+        {
+            return typeSymbol.ToDisplayString(MinimallyQualifiedFormat.WithMiscellaneousOptions(UseSpecialTypes));
+        }
+
+        #endregion
     }
     #endregion
 }
