@@ -415,7 +415,7 @@ internal static class UnionContextFactory
                 {
                     IsRefLikeType: false,
                     IsUnboundGenericType: false,
-                    SpecialType: not (System_Void or System_Object),
+                    OriginalDefinition.SpecialType: not (System_Object or System_Void or System_Nullable_T),
                 },
                 IArrayTypeSymbol => true,
                 _ => false,

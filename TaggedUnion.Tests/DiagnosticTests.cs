@@ -94,6 +94,23 @@ public sealed class DiagnosticTests
     }
 
     [Test]
+    public void NullableCaseType()
+    {
+        AssertDiagnostic(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(typeof(int?), typeof(string))]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0004"
+        );
+    }
+
+    [Test]
     public void UnboundGenericCaseType()
     {
         AssertDiagnostic(
