@@ -92,7 +92,6 @@ internal static class UnionContextFactory
             var unionCaseCandidate = unionCaseCandidates[i];
             var caseTypeSymbol = unionCaseCandidate.TypeSymbol;
             var caseContext = new UnionCaseContext(
-                TypeSymbol: caseTypeSymbol,
                 StorageKind: caseTypeSymbol.IsReferenceType
                     ? Reference
                     : caseTypeSymbol.IsUnmanagedType
