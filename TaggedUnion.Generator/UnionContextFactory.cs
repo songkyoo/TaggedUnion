@@ -17,6 +17,9 @@ internal static class UnionContextFactory
 {
     #region Constants
     private static readonly string TaggedUnionCaseAttributeString = "Macaron.Union.TaggedUnionCaseAttribute";
+    private static readonly string AttributeString = "System.Attribute";
+    private static readonly string UnionAttributeString = "System.Runtime.CompilerServices.UnionAttribute";
+    private static readonly string UnionInterfaceString = "System.Runtime.CompilerServices.IUnion";
     #endregion
 
     #region Types
@@ -121,6 +124,7 @@ internal static class UnionContextFactory
         var unionContext = new UnionContext(
             TypeSymbol: unionTypeSymbol,
             TypeName: unionTypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+            SupportsOfficialUnion: SupportsOfficialUnion(context.SemanticModel.Compilation),
             CaseContexts: caseContextsBuilder.ToImmutable()
         );
 
@@ -186,6 +190,59 @@ internal static class UnionContextFactory
                 { IsValueType: true } => Managed,
                 _ => throw new InvalidOperationException($"Cannot determine the storage kind for type '{typeSymbol.ToDisplayString()}'."),
             };
+        }
+        #endregion
+    }
+
+    private static bool SupportsOfficialUnion(Compilation compilation)
+    {
+        var unionAttributeSymbol = compilation.GetTypeByMetadataName(UnionAttributeString);
+        var unionInterfaceSymbol = compilation.GetTypeByMetadataName(UnionInterfaceString);
+
+        return IsUnionAttribute(unionAttributeSymbol, compilation)
+            && IsUnionInterface(unionInterfaceSymbol, compilation);
+
+        #region Local Functions
+        static bool IsUnionAttribute(INamedTypeSymbol? symbol, Compilation compilation)
+        {
+            if (symbol is not { TypeKind: Class, Arity: 0 })
+            {
+                return false;
+            }
+
+            var attributeSymbol = compilation.GetTypeByMetadataName(AttributeString);
+            var currentSymbol = symbol;
+
+            while (currentSymbol != null)
+            {
+                if (SymbolEqualityComparer.Default.Equals(currentSymbol, attributeSymbol))
+                {
+                    return true;
+                }
+
+                currentSymbol = currentSymbol.BaseType;
+            }
+
+            return false;
+        }
+
+        static bool IsUnionInterface(INamedTypeSymbol? symbol, Compilation compilation)
+        {
+            if (symbol is not { TypeKind: Interface, Arity: 0 })
+            {
+                return false;
+            }
+
+            var objectSymbol = compilation.GetSpecialType(System_Object);
+
+            return symbol
+                .GetMembers("Value")
+                .OfType<IPropertySymbol>()
+                .Any(propertySymbol =>
+                    propertySymbol.Parameters.Length == 0
+                    && propertySymbol.GetMethod is { DeclaredAccessibility: Accessibility.Public }
+                    && SymbolEqualityComparer.Default.Equals(propertySymbol.Type, objectSymbol)
+                );
         }
         #endregion
     }

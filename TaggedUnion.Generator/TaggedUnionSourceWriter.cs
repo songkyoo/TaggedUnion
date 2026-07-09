@@ -118,7 +118,7 @@ internal sealed class TaggedUnionSourceWriter
         }
 
         // partial declaration begin
-        AppendLine($"partial struct {unionTypeName} : global::System.IEquatable<{unionTypeName}>");
+        WritePartialDeclaration(unionTypeName);
         AppendLine("{");
 
         IncreaseIndent();
@@ -204,6 +204,19 @@ internal sealed class TaggedUnionSourceWriter
         }
 
         AppendLine("}");
+    }
+
+    private void WritePartialDeclaration(string unionTypeName)
+    {
+        if (_context.SupportsOfficialUnion)
+        {
+            AppendLine("[global::System.Runtime.CompilerServices.Union]");
+            AppendLine($"partial struct {unionTypeName} : global::System.IEquatable<{unionTypeName}>, global::System.Runtime.CompilerServices.IUnion");
+
+            return;
+        }
+
+        AppendLine($"partial struct {unionTypeName} : global::System.IEquatable<{unionTypeName}>");
     }
 
     private void WriteOperatorOverloads()

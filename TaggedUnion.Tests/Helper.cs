@@ -1,41 +1,38 @@
 ﻿using System.Collections.Immutable;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace Macaron.Union.Tests;
 
-internal static class Helper
+internal static partial class Helper
 {
-    public static void AssertGeneratedCode(string sourceCode, string[] expectedCodes)
-    {
-        var (_, generatedCodes) = CompileAndGetResults<TaggedUnionGenerator>(
-            sourceCode,
-            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+    private const string AttributeString = "System.Attribute";
+    private const string UnionAttributeString = "System.Runtime.CompilerServices.UnionAttribute";
+    private const string UnionInterfaceString = "System.Runtime.CompilerServices.IUnion";
 
-        );
+    private static readonly CSharpParseOptions ParseOptions = CSharpParseOptions.Default.WithLanguageVersion(
+        LanguageVersion.Preview
+    );
 
-        Assert.That(generatedCodes, Has.Length.EqualTo(expectedCodes.Length));
-
-        foreach (var (generatedCode, index) in generatedCodes.Select((code, index) => (code, index)))
-        {
-            Assert.That(
-                actual: generatedCode.ReplaceLineEndings(),
-                expression: Is.EqualTo(expectedCodes[index].ReplaceLineEndings())
-            );
-        }
-    }
+    [GeneratedRegex(
+        pattern: @"^(?<indent>[ \t]*)partial struct (?<typeName>@?[A-Za-z_][A-Za-z0-9_]*) : global::System\.IEquatable<\k<typeName>>\r?$",
+        options: RegexOptions.Multiline)
+    ]
+    private static partial Regex UnionDeclarationRegex { get; }
 
     public static void AssertGeneratedCode(string sourceCode, int sourceIndex, string expected)
     {
-        var (_, generatedCodes) = CompileAndGetResults<TaggedUnionGenerator>(
+        var (_, generatedCodes, supportsOfficialUnion) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
         );
+        var expectedCode = ApplyOfficialUnionDeclaration(expected, supportsOfficialUnion);
 
         Assert.That(
             actual: generatedCodes[sourceIndex].ReplaceLineEndings(),
-            expression: Is.EqualTo(expected.ReplaceLineEndings())
+            expression: Is.EqualTo(expectedCode.ReplaceLineEndings())
         );
     }
 
@@ -44,9 +41,13 @@ internal static class Helper
         AssertGeneratedCode(sourceCode, sourceIndex: 0, expected);
     }
 
-    public static void AssertGeneratedCodeContains(string sourceCode, int sourceIndex, params string[] expectedFragments)
+    public static void AssertGeneratedCodeContains(
+        string sourceCode,
+        int sourceIndex,
+        params string[] expectedFragments
+    )
     {
-        var (_, generatedCodes) = CompileAndGetResults<TaggedUnionGenerator>(
+        var (_, generatedCodes, _) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
         );
@@ -73,7 +74,7 @@ internal static class Helper
 
     public static void AssertDiagnostics(string sourceCode, params string[] expectedDiagnosticIds)
     {
-        var (diagnostics, _) = CompileAndGetResults<TaggedUnionGenerator>(
+        var (diagnostics, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
         );
@@ -91,7 +92,7 @@ internal static class Helper
         string expectedLocationText
     )
     {
-        var (diagnostics, _) = CompileAndGetResults<TaggedUnionGenerator>(
+        var (diagnostics, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
         );
@@ -113,10 +114,103 @@ internal static class Helper
         );
     }
 
-    private static (ImmutableArray<Diagnostic> diagnostics, string[] generatedCodes) CompileAndGetResults<T>(
+    private static string ApplyOfficialUnionDeclaration(string expectedCode, bool supportsOfficialUnion)
+    {
+        if (!supportsOfficialUnion)
+        {
+            return expectedCode;
+        }
+
+        return UnionDeclarationRegex.Replace(expectedCode, match =>
+        {
+            var indent = match.Groups["indent"].Value;
+            var typeName = match.Groups["typeName"].Value;
+
+            return $"{indent}[global::System.Runtime.CompilerServices.Union]\n{indent}partial struct {typeName} : global::System.IEquatable<{typeName}>, global::System.Runtime.CompilerServices.IUnion";
+        });
+    }
+
+    private static bool SupportsOfficialUnion(Compilation compilation)
+    {
+        var unionAttributeSymbol = compilation.GetTypeByMetadataName(UnionAttributeString);
+        var unionInterfaceSymbol = compilation.GetTypeByMetadataName(UnionInterfaceString);
+
+        return IsUnionAttribute(unionAttributeSymbol, compilation)
+            && IsUnionInterface(unionInterfaceSymbol, compilation);
+
+        #region Local Functions
+        static bool IsUnionAttribute(INamedTypeSymbol? symbol, Compilation compilation)
+        {
+            if (symbol is not { TypeKind: TypeKind.Class, Arity: 0 })
+            {
+                return false;
+            }
+
+            var attributeSymbol = compilation.GetTypeByMetadataName(AttributeString);
+            var currentSymbol = symbol;
+
+            while (currentSymbol != null)
+            {
+                if (SymbolEqualityComparer.Default.Equals(currentSymbol, attributeSymbol))
+                {
+                    return true;
+                }
+
+                currentSymbol = currentSymbol.BaseType;
+            }
+
+            return false;
+        }
+
+        static bool IsUnionInterface(INamedTypeSymbol? symbol, Compilation compilation)
+        {
+            if (symbol is not { TypeKind: TypeKind.Interface, Arity: 0 })
+            {
+                return false;
+            }
+
+            var objectSymbol = compilation.GetSpecialType(SpecialType.System_Object);
+
+            return symbol
+                .GetMembers("Value")
+                .OfType<IPropertySymbol>()
+                .Any(propertySymbol =>
+                    propertySymbol.Parameters.Length == 0
+                    && propertySymbol.GetMethod is { DeclaredAccessibility: Accessibility.Public }
+                    && SymbolEqualityComparer.Default.Equals(propertySymbol.Type, objectSymbol)
+                );
+        }
+        #endregion
+    }
+
+    private static (ImmutableArray<Diagnostic> diagnostics, string[] generatedCodes, bool supportsOfficialUnion) CompileAndGetResults<T>(
         string sourceCode,
         Assembly[]? additionalAssemblies = null
     ) where T : IIncrementalGenerator, new()
+    {
+        var compilation = CreateCompilation(sourceCode, additionalAssemblies);
+        var supportsOfficialUnion = SupportsOfficialUnion(compilation);
+        var generator = new T();
+        var driver = CSharpGeneratorDriver.Create(
+            generators: [generator.AsSourceGenerator()],
+            parseOptions: ParseOptions
+        );
+
+        var result = driver.RunGenerators(compilation).GetRunResult().Results.Single();
+        var generatedSources = result.GeneratedSources;
+        var generatedCodes = generatedSources.Select(source => source.SourceText.ToString()).ToArray();
+
+        var allDiagnostics = compilation.GetDiagnostics()
+            .Concat(result.Diagnostics)
+            .ToImmutableArray();
+
+        return (allDiagnostics, generatedCodes, supportsOfficialUnion);
+    }
+
+    private static CSharpCompilation CreateCompilation(
+        string sourceCode,
+        Assembly[]? additionalAssemblies = null
+    )
     {
         var references = AppDomain
             .CurrentDomain
@@ -127,8 +221,9 @@ internal static class Helper
             .Cast<MetadataReference>()
             .ToImmutableArray();
 
-        var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode);
-        var compilation = CSharpCompilation.Create(
+        var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, ParseOptions);
+
+        return CSharpCompilation.Create(
             assemblyName: "Macaron.TaggedUnion.Tests",
             syntaxTrees: [syntaxTree],
             references,
@@ -137,18 +232,5 @@ internal static class Helper
                 nullableContextOptions: NullableContextOptions.Enable
             )
         );
-
-        var generator = new T();
-        var driver = CSharpGeneratorDriver.Create(generator);
-
-        var result = driver.RunGenerators(compilation).GetRunResult().Results.Single();
-        var generatedSources = result.GeneratedSources;
-        var generatedCodes = generatedSources.Select(source => source.SourceText.ToString()).ToArray();
-
-        var allDiagnostics = compilation.GetDiagnostics()
-            .Concat(result.Diagnostics)
-            .ToImmutableArray();
-
-        return (allDiagnostics, generatedCodes);
     }
 }
