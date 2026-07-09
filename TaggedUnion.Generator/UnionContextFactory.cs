@@ -190,11 +190,13 @@ internal static class UnionContextFactory
 
         static UnionCaseStorageKind GetCaseStorageKind(ITypeSymbol typeSymbol)
         {
-            return typeSymbol.IsReferenceType
-                ? Reference
-                : typeSymbol.IsUnmanagedType
-                    ? Unmanaged
-                    : throw new InvalidOperationException($"Cannot determine the storage kind for type '{typeSymbol.ToDisplayString()}'.");
+            return typeSymbol switch
+            {
+                { IsReferenceType: true } => Reference,
+                { IsUnmanagedType: true } => Unmanaged,
+                { IsValueType: true } => Managed,
+                _ => throw new InvalidOperationException($"Cannot determine the storage kind for type '{typeSymbol.ToDisplayString()}'."),
+            };
         }
         #endregion
     }

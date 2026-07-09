@@ -65,6 +65,7 @@ internal sealed class TaggedUnionSourceWriter
         {
             Reference => "_reference",
             Unmanaged => $"_unmanaged.Value{context.Tag}",
+            Managed => $"_value{context.Tag}",
             _ => throw new InvalidOperationException($"Invalid storage kind: {storageKind}")
         };
     }
@@ -278,6 +279,11 @@ internal sealed class TaggedUnionSourceWriter
         if (caseContexts.Any(x => x.StorageKind == Unmanaged))
         {
             AppendLine("private readonly Unmanaged _unmanaged;");
+        }
+
+        foreach (var context in caseContexts.Where(x => x.StorageKind == Managed))
+        {
+            AppendLine($"private readonly {context.FullyQualifiedTypeName} _value{context.Tag};");
         }
 
         AppendLine("#endregion");
