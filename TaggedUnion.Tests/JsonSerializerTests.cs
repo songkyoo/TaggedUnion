@@ -1,4 +1,6 @@
+using System.Reflection;
 using System.Text.Json;
+using Microsoft.CodeAnalysis;
 
 using static Macaron.Union.Tests.Helper;
 
@@ -7,6 +9,56 @@ namespace Macaron.Union.Tests;
 [TestFixture]
 public sealed class JsonSerializerTests
 {
+    #region Static Methods
+    private static Assembly CompileJsonSerializableAssembly(string sourceCode)
+    {
+        var (compilation, driver) = CreateCompilationAndDriver(
+            sourceCode,
+            additionalAssemblies:
+            [
+                typeof(TaggedUnionAttribute).Assembly,
+                typeof(TaggedUnionJsonSerializerAttribute).Assembly,
+                typeof(JsonSerializer).Assembly,
+            ],
+            assemblyName: "Macaron.TaggedUnion.JsonSerializer.Tests.Generated",
+            generators:
+            [
+                new TaggedUnionGenerator().AsSourceGenerator(),
+                new TaggedUnionJsonSerializerGenerator().AsSourceGenerator(),
+            ]
+        );
+
+        driver.RunGeneratorsAndUpdateCompilation(
+            compilation,
+            out var outputCompilation,
+            out var generatorDiagnostics
+        );
+
+        var errorDiagnostics = outputCompilation
+            .GetDiagnostics()
+            .Concat(generatorDiagnostics)
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        Assert.That(
+            errorDiagnostics,
+            Is.Empty,
+            string.Join(Environment.NewLine, errorDiagnostics.Select(diagnostic => diagnostic.ToString()))
+        );
+
+        using var stream = new MemoryStream();
+        var emitResult = outputCompilation.Emit(stream);
+
+        Assert.That(
+            emitResult.Success,
+            Is.True,
+            string.Join(Environment.NewLine, emitResult.Diagnostics.Select(diagnostic => diagnostic.ToString()))
+        );
+
+        return Assembly.Load(stream.ToArray());
+    }
+    #endregion
+
     #region Fields
     private Type _unionType = null!;
     #endregion
@@ -41,11 +93,8 @@ public sealed class JsonSerializerTests
         var intValue = CreateUnion(7);
         var stringValue = CreateUnion("hello");
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(JsonSerializer.Serialize(intValue, _unionType), Is.EqualTo("[1,7]"));
-            Assert.That(JsonSerializer.Serialize(stringValue, _unionType), Is.EqualTo("[42,\"hello\"]"));
-        });
+        Assert.That(JsonSerializer.Serialize(intValue, _unionType), Is.EqualTo("[1,7]"));
+        Assert.That(JsonSerializer.Serialize(stringValue, _unionType), Is.EqualTo("[42,\"hello\"]"));
 
         #region Local Functions
         object CreateUnion(object value)
@@ -67,6 +116,14 @@ public sealed class JsonSerializerTests
         Assert.That(actual, Is.EqualTo(expected));
     }
 
+    [Test]
+    public void ReadNullProducesUninitializedValue()
+    {
+        var value = JsonSerializer.Deserialize("null", _unionType);
+
+        Assert.That(_unionType.GetProperty("HasValue")!.GetValue(value), Is.False);
+    }
+
     [TestCase("{}")]
     [TestCase("[\"1\",7]")]
     [TestCase("[0,null]")]
@@ -83,14 +140,11 @@ public sealed class JsonSerializerTests
     }
 
     [Test]
-    public void WriteRejectsUninitializedValue()
+    public void WriteUninitializedValueAsNull()
     {
         var value = Activator.CreateInstance(_unionType)!;
 
-        Assert.That(
-            () => JsonSerializer.Serialize(value, _unionType),
-            Throws.TypeOf<JsonException>()
-        );
+        Assert.That(JsonSerializer.Serialize(value, _unionType), Is.EqualTo("null"));
     }
     #endregion
 }

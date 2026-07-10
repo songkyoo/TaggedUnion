@@ -8,7 +8,7 @@ public sealed class SourceGenerationTests
     [Test]
     public void HintNameIsStable()
     {
-        AssertGeneratedHintName(
+        var (_, _, generatedHintNames, _) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode:
             """
             namespace Macaron.Union.Tests;
@@ -18,8 +18,11 @@ public sealed class SourceGenerationTests
             {
             }
             """,
-            expected: "Foo_0.c82fa166.g.cs"
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
         );
+
+        Assert.That(generatedHintNames, Has.Length.EqualTo(1));
+        Assert.That(generatedHintNames[0], Is.EqualTo("Foo_0.c82fa166.g.cs"));
     }
 
     [Test]

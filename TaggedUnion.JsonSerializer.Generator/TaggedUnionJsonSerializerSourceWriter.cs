@@ -71,7 +71,7 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter
 
         IncreaseIndent();
 
-        WriteJsonConverterInterface();
+        WriteOverrides();
 
         // json converter end
         DecreaseIndent();
@@ -102,11 +102,13 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter
         return _builder.ToString();
     }
 
-    private void WriteJsonConverterInterface()
+    private void WriteOverrides()
     {
         var unionTypeName = _context.TypeName;
 
-        AppendLine($"#region JsonConverter<{unionTypeName}> Interface");
+        AppendLine($"#region Overrides");
+        AppendLine("public override bool HandleNull => true;");
+        AppendLine();
         WriteReadMethod();
         AppendLine();
         WriteWriteMethod();
@@ -123,6 +125,11 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter
         AppendLine($"{Indent}global::System.Text.Json.JsonSerializerOptions options");
         AppendLine(")");
         AppendLine("{");
+        AppendLine($"{Indent}if (reader.TokenType == global::System.Text.Json.JsonTokenType.Null)");
+        AppendLine($"{Indent}{{");
+        AppendLine($"{Indent}{Indent}return default;");
+        AppendLine($"{Indent}}}");
+        AppendLine();
         AppendLine($"{Indent}if (reader.TokenType != global::System.Text.Json.JsonTokenType.StartArray)");
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}throw new global::System.Text.Json.JsonException(\"Expected a JSON array containing a tag and value.\");");
@@ -149,7 +156,7 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter
             AppendLine($"{Indent}{Indent}{caseContext.Tag} => new {unionTypeName}({GetDeserializeExpression(caseContext)}),");
         }
 
-        AppendLine($"{Indent}{Indent}_ => throw new global::System.Text.Json.JsonException($\"Unknown tag: {{tag}}\"),");
+        AppendLine($"{Indent}{Indent}_ => throw new global::System.Text.Json.JsonException($\"Invalid tag: {{tag}}\"),");
         AppendLine($"{Indent}}};");
         AppendLine();
         AppendLine($"{Indent}if (!reader.Read() || reader.TokenType != global::System.Text.Json.JsonTokenType.EndArray)");
@@ -175,10 +182,6 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter
     private void WriteWriteMethod()
     {
         var unionTypeName = _context.TypeName;
-        var validTagExpression = string.Join(
-            " && ",
-            _context.CaseContexts.Select(context => $"value._tag != {context.Tag}")
-        );
 
         AppendLine("public override void Write(");
         AppendLine($"{Indent}global::System.Text.Json.Utf8JsonWriter writer,");
@@ -186,9 +189,11 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter
         AppendLine($"{Indent}global::System.Text.Json.JsonSerializerOptions options");
         AppendLine(")");
         AppendLine("{");
-        AppendLine($"{Indent}if ({validTagExpression})");
+        AppendLine($"{Indent}if (value._tag == 0)");
         AppendLine($"{Indent}{{");
-        AppendLine($"{Indent}{Indent}throw new global::System.Text.Json.JsonException($\"Invalid tag: {{value._tag}}\");");
+        AppendLine($"{Indent}{Indent}writer.WriteNullValue();");
+        AppendLine();
+        AppendLine($"{Indent}{Indent}return;");
         AppendLine($"{Indent}}}");
         AppendLine();
         AppendLine($"{Indent}writer.WriteStartArray();");
@@ -199,10 +204,10 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter
 
         foreach (var caseContext in _context.CaseContexts)
         {
-            AppendLine($"{Indent}{Indent}case {caseContext.Tag}:");
-            AppendLine($"{Indent}{Indent}{Indent}global::System.Text.Json.JsonSerializer.Serialize<{caseContext.FullyQualifiedTypeName}>(writer, {GetSerializeValueExpression(caseContext)}, options);");
-            AppendLine($"{Indent}{Indent}{Indent}break;");
+            AppendLine($"{Indent}{Indent}case {caseContext.Tag}: global::System.Text.Json.JsonSerializer.Serialize<{caseContext.FullyQualifiedTypeName}>(writer, {GetSerializeValueExpression(caseContext)}, options); break;");
         }
+
+        AppendLine($"{Indent}{Indent}default: throw new global::System.Text.Json.JsonException($\"Invalid tag: {{value._tag}}\");");
 
         AppendLine($"{Indent}}}");
         AppendLine();
