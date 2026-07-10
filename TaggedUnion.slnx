@@ -1,5 +1,4 @@
 <Solution>
-  <Project Path="TaggedUnion.Core/TaggedUnion.Core.csproj" />
   <Project Path="TaggedUnion.Generator/TaggedUnion.Generator.csproj" />
   <Project Path="TaggedUnion.Tests/TaggedUnion.Tests.csproj" />
   <Project Path="TaggedUnion/TaggedUnion.csproj" />

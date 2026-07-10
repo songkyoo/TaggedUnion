@@ -3,11 +3,11 @@
   <PropertyGroup>
     <AssemblyName>Macaron.TaggedUnion</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
-    <IncludeBuildOutput>false</IncludeBuildOutput>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <RootNamespace>Macaron.Union</RootNamespace>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Version>$(TaggedUnionVersion)</Version>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -19,13 +19,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TaggedUnion.Core\TaggedUnion.Core.csproj" PrivateAssets="all" />
-    <ProjectReference Include="..\TaggedUnion.Generator\TaggedUnion.Generator.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\TaggedUnion.Generator\TaggedUnion.Generator.csproj" PrivateAssets="all" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\TaggedUnion.Core\bin\$(Configuration)\netstandard2.0\Macaron.TaggedUnion.Core.dll" Pack="true" PackagePath="lib/netstandard2.0" />
-    <None Include="..\TaggedUnion.Core\bin\$(Configuration)\netstandard2.0\Macaron.TaggedUnion.Core.dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
     <None Include="..\TaggedUnion.Generator\bin\$(Configuration)\netstandard2.0\Macaron.TaggedUnion.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
   </ItemGroup>
 
