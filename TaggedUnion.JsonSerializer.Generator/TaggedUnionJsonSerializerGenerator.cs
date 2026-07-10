@@ -1,5 +1,10 @@
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
+
+using static Macaron.Union.HintNameHelper;
+using static Macaron.Union.TaggedUnionMetadataNames;
 
 namespace Macaron.Union;
 
@@ -7,8 +12,7 @@ namespace Macaron.Union;
 public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
 {
     #region Constants
-    private const string TaggedUnionJsonSerializerAttributeMetadataName =
-        "Macaron.Union.TaggedUnionJsonSerializerAttribute";
+    private const string TaggedUnionJsonSerializerAttributeMetadataName = "Macaron.Union.TaggedUnionJsonSerializerAttribute";
     #endregion
 
     #region Static Methods
@@ -20,14 +24,19 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
         var taggedUnionAttribute = context
             .TargetSymbol
             .GetAttributes()
-            .FirstOrDefault(attribute =>
-                attribute.AttributeClass?.ToDisplayString()
-                    == TaggedUnionMetadataNames.TaggedUnionAttribute
-            );
+            .FirstOrDefault(attribute => attribute.AttributeClass?.ToDisplayString() == TaggedUnionAttribute);
 
         return taggedUnionAttribute != null
             ? UnionContextFactory.Create(context, taggedUnionAttribute, cancellationToken)
             : null;
+    }
+
+    private static SourceText GenerateSourceText(UnionContext context)
+    {
+        var writer = new TaggedUnionJsonSerializerSourceWriter(context);
+        var source = writer.Generate();
+
+        return SourceText.From(source, Encoding.UTF8);
     }
     #endregion
 
@@ -44,12 +53,17 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
             .Where(static result => result != null)
             .Select(static (result, _) => result!);
 
-        context.RegisterSourceOutput(results, static (_, result) =>
+        context.RegisterSourceOutput(results, static (sourceProductionContext, result) =>
         {
-            if (result is not UnionValidationResult.Success)
+            if (result is not UnionValidationResult.Success { Context: var context })
             {
                 return;
             }
+
+            var hintName = $"{GetTypeHintName(context.TypeSymbol)}.JsonSerializer.g.cs";
+            var sourceText = GenerateSourceText(context);
+
+            sourceProductionContext.AddSource(hintName, sourceText);
         });
     }
     #endregion

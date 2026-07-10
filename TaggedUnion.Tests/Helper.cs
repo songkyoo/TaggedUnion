@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -76,6 +77,82 @@ internal static partial class Helper
 
         Assert.That(generatedHintNames, Has.Length.EqualTo(1));
         Assert.That(generatedHintNames[0], Is.EqualTo(expected));
+    }
+
+    public static void AssertJsonSerializerGeneratedCodeContains(
+        string sourceCode,
+        params string[] expectedFragments
+    )
+    {
+        var (_, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionJsonSerializerGenerator>(
+            sourceCode,
+            additionalAssemblies:
+            [
+                typeof(TaggedUnionAttribute).Assembly,
+                typeof(TaggedUnionJsonSerializerAttribute).Assembly,
+                typeof(JsonSerializer).Assembly,
+            ]
+        );
+        var generatedCode = generatedCodes.Single().ReplaceLineEndings();
+
+        foreach (var expectedFragment in expectedFragments)
+        {
+            Assert.That(
+                actual: generatedCode,
+                expression: Does.Contain(expectedFragment.ReplaceLineEndings())
+            );
+        }
+    }
+
+    public static Assembly CompileJsonSerializableAssembly(string sourceCode)
+    {
+        var compilation = CreateCompilation(
+            sourceCode,
+            additionalAssemblies:
+            [
+                typeof(TaggedUnionAttribute).Assembly,
+                typeof(TaggedUnionJsonSerializerAttribute).Assembly,
+                typeof(JsonSerializer).Assembly,
+            ],
+            assemblyName: "Macaron.TaggedUnion.JsonSerializer.Tests.Generated"
+        );
+        var driver = CSharpGeneratorDriver.Create(
+            generators:
+            [
+                new TaggedUnionGenerator().AsSourceGenerator(),
+                new TaggedUnionJsonSerializerGenerator().AsSourceGenerator(),
+            ],
+            parseOptions: ParseOptions
+        );
+
+        driver.RunGeneratorsAndUpdateCompilation(
+            compilation,
+            out var outputCompilation,
+            out var generatorDiagnostics
+        );
+
+        var errorDiagnostics = outputCompilation
+            .GetDiagnostics()
+            .Concat(generatorDiagnostics)
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        Assert.That(
+            errorDiagnostics,
+            Is.Empty,
+            string.Join(Environment.NewLine, errorDiagnostics.Select(diagnostic => diagnostic.ToString()))
+        );
+
+        using var stream = new MemoryStream();
+        var emitResult = outputCompilation.Emit(stream);
+
+        Assert.That(
+            emitResult.Success,
+            Is.True,
+            string.Join(Environment.NewLine, emitResult.Diagnostics.Select(diagnostic => diagnostic.ToString()))
+        );
+
+        return Assembly.Load(stream.ToArray());
     }
 
     public static void AssertDiagnostic(string sourceCode, string expectedDiagnosticId)
@@ -226,7 +303,8 @@ internal static partial class Helper
 
     private static CSharpCompilation CreateCompilation(
         string sourceCode,
-        Assembly[]? additionalAssemblies = null
+        Assembly[]? additionalAssemblies = null,
+        string assemblyName = "Macaron.TaggedUnion.Tests"
     )
     {
         var references = AppDomain
@@ -241,7 +319,7 @@ internal static partial class Helper
         var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, ParseOptions);
 
         return CSharpCompilation.Create(
-            assemblyName: "Macaron.TaggedUnion.Tests",
+            assemblyName,
             syntaxTrees: [syntaxTree],
             references,
             options: new CSharpCompilationOptions(
