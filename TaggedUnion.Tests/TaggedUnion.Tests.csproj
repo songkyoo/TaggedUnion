@@ -26,6 +26,8 @@
   <ItemGroup>
     <ProjectReference Include="..\TaggedUnion\TaggedUnion.csproj" />
     <ProjectReference Include="..\TaggedUnion.Generator\TaggedUnion.Generator.csproj" />
+    <ProjectReference Include="..\TaggedUnion.JsonSerializer\TaggedUnion.JsonSerializer.csproj" />
+    <ProjectReference Include="..\TaggedUnion.JsonSerializer.Generator\TaggedUnion.JsonSerializer.Generator.csproj" />
   </ItemGroup>
 
 </Project>

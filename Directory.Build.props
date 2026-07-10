@@ -1,6 +1,7 @@
 ﻿<Project>
 
   <PropertyGroup>
+    <TaggedUnionJsonSerializerVersion>0.1.0</TaggedUnionJsonSerializerVersion>
     <TaggedUnionVersion>0.1.0</TaggedUnionVersion>
   </PropertyGroup>
 

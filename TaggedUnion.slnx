@@ -1,5 +1,7 @@
 <Solution>
   <Project Path="TaggedUnion.Generator/TaggedUnion.Generator.csproj" />
+  <Project Path="TaggedUnion.JsonSerializer.Generator/TaggedUnion.JsonSerializer.Generator.csproj" />
+  <Project Path="TaggedUnion.JsonSerializer/TaggedUnion.JsonSerializer.csproj" />
   <Project Path="TaggedUnion.Tests/TaggedUnion.Tests.csproj" />
   <Project Path="TaggedUnion/TaggedUnion.csproj" />
 </Solution>
