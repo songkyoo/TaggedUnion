@@ -75,4 +75,22 @@ internal static class TaggedUnionDiagnostics
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
+
+    public static readonly DiagnosticDescriptor InvalidCaseTagRule = new(
+        id: "MTU0009",
+        title: "Case tag must be greater than zero",
+        messageFormat: "Case type '{0}' specifies invalid tag '{1}' in tagged union target type '{2}'. Tag 0 is reserved for an uninitialized value.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
+
+    public static readonly DiagnosticDescriptor DuplicateCaseTagRule = new(
+        id: "MTU0010",
+        title: "Case tag cannot be duplicated",
+        messageFormat: "Case type '{0}' specifies duplicate tag '{1}' in tagged union target type '{2}'.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
 }

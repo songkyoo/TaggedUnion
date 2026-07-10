@@ -10,5 +10,7 @@ internal sealed record UnionCaseCandidateContext(
     Location ParamNameLocation,
     bool IsParamNameExplicit,
     bool IsParamNameValid,
-    int Tag
+    byte Tag,
+    Location TagLocation,
+    bool IsTagExplicit
 );

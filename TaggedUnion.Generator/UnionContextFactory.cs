@@ -29,7 +29,8 @@ internal static class UnionContextFactory
         string? ParamName,
         Location ParamNameLocation,
         bool IsParamNameValid,
-        int? Tag
+        byte? Tag,
+        Location TagLocation
     );
     #endregion
 
@@ -94,6 +95,11 @@ internal static class UnionContextFactory
             attributeMap: CreateCaseAttributeMap(caseAttributes)
         );
 
+        isValid &= ValidateCaseTags(
+            structDeclarationSyntax,
+            caseCandidates,
+            diagnosticsBuilder
+        );
         isValid &= ValidateCaseTypes(
             structDeclarationSyntax,
             caseCandidates,
@@ -159,10 +165,12 @@ internal static class UnionContextFactory
             {
                 if (attributeMap.TryGetValue(candidate.TypeSymbol, out var caseAttribute))
                 {
-                    var candidateWithTag = caseAttribute.Tag != null
+                    var candidateWithTag = caseAttribute.Tag is { } tag
                         ? candidate with
                         {
-                            Tag = caseAttribute.Tag.Value,
+                            Tag = tag,
+                            TagLocation = caseAttribute.TagLocation,
+                            IsTagExplicit = true,
                         }
                         : candidate;
 
@@ -300,12 +308,19 @@ internal static class UnionContextFactory
                 return false;
             }
 
-            if (attribute.ConstructorArguments[2].Value is not int tag)
+            if (attribute.ConstructorArguments[2].Value is not byte tag)
             {
                 attributeContexts = default;
 
                 return false;
             }
+
+            var tagArgument = GetCaseAttributeArgument(
+                attribute,
+                parameterName: "tag",
+                parameterIndex: 2,
+                cancellationToken
+            );
 
             builder.Add(new TaggedUnionCaseAttributeContext(
                 TypeSymbol: typeSymbol,
@@ -313,7 +328,8 @@ internal static class UnionContextFactory
                 ParamName: paramName,
                 ParamNameLocation: GetCaseAttributeParamNameLocation(attribute, cancellationToken),
                 IsParamNameValid: isParamNameValid,
-                Tag: tag != 0 ? tag : null
+                Tag: tagArgument != null ? tag : null,
+                TagLocation: tagArgument?.Expression.GetLocation() ?? Location.None
             ));
         }
 
@@ -342,14 +358,46 @@ internal static class UnionContextFactory
             CancellationToken cancellationToken
         )
         {
-            var attributeSyntax = attribute.ApplicationSyntaxReference?.GetSyntax(cancellationToken) as AttributeSyntax;
+            var argument = GetCaseAttributeArgument(
+                attribute,
+                parameterName: "paramName",
+                parameterIndex: 1,
+                cancellationToken
+            );
 
-            if (attributeSyntax?.ArgumentList is { Arguments.Count: > 1 })
+            return argument?.Expression.GetLocation()
+                ?? attribute.ApplicationSyntaxReference?.GetSyntax(cancellationToken).GetLocation()
+                ?? Location.None;
+        }
+
+        static AttributeArgumentSyntax? GetCaseAttributeArgument(
+            AttributeData attribute,
+            string parameterName,
+            int parameterIndex,
+            CancellationToken cancellationToken
+        )
+        {
+            var attributeSyntax = attribute.ApplicationSyntaxReference?.GetSyntax(cancellationToken) as AttributeSyntax;
+            var arguments = attributeSyntax?.ArgumentList?.Arguments;
+
+            if (arguments == null)
             {
-                return attributeSyntax.ArgumentList.Arguments[1].Expression.GetLocation();
+                return null;
             }
 
-            return attributeSyntax?.GetLocation() ?? Location.None;
+            var namedArgument = arguments.Value.FirstOrDefault(argument =>
+                argument.NameColon?.Name.Identifier.ValueText == parameterName
+            );
+
+            if (namedArgument != null)
+            {
+                return namedArgument;
+            }
+
+            return arguments.Value.Count > parameterIndex
+                && arguments.Value[parameterIndex].NameColon == null
+                    ? arguments.Value[parameterIndex]
+                    : null;
         }
         #endregion
     }
@@ -385,7 +433,9 @@ internal static class UnionContextFactory
                 ParamNameLocation: attributeSyntax.ArgumentList!.Arguments[i].GetLocation(),
                 IsParamNameExplicit: false,
                 IsParamNameValid: true,
-                Tag: i + 1
+                Tag: (byte)(i + 1),
+                TagLocation: attributeSyntax.ArgumentList!.Arguments[i].GetLocation(),
+                IsTagExplicit: false
             ));
         }
 
@@ -612,6 +662,81 @@ internal static class UnionContextFactory
         )
         {
             return candidate.IsParamNameExplicit || !existingCandidate.IsParamNameExplicit
+                ? candidate
+                : existingCandidate;
+        }
+        #endregion
+    }
+
+    private static bool ValidateCaseTags(
+        StructDeclarationSyntax structDeclarationSyntax,
+        ImmutableArray<UnionCaseCandidateContext> candidates,
+        ImmutableArray<Diagnostic>.Builder diagnosticsBuilder
+    )
+    {
+        var invalidCaseTags = new List<UnionCaseCandidateContext>();
+        var duplicateCaseTags = new List<UnionCaseCandidateContext>();
+        var knownTags = new Dictionary<byte, UnionCaseCandidateContext>();
+
+        foreach (var candidate in candidates)
+        {
+            if (candidate.Tag == 0)
+            {
+                invalidCaseTags.Add(candidate);
+
+                continue;
+            }
+
+            if (knownTags.TryGetValue(candidate.Tag, out var existingCandidate))
+            {
+                duplicateCaseTags.Add(GetDuplicateCaseTagDiagnosticCandidate(
+                    existingCandidate,
+                    candidate
+                ));
+            }
+            else
+            {
+                knownTags.Add(candidate.Tag, candidate);
+            }
+        }
+
+        foreach (var candidate in invalidCaseTags)
+        {
+            diagnosticsBuilder.Add(Diagnostic.Create(
+                descriptor: TaggedUnionDiagnostics.InvalidCaseTagRule,
+                location: candidate.TagLocation,
+                messageArgs:
+                [
+                    candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                    candidate.Tag,
+                    structDeclarationSyntax.Identifier,
+                ]
+            ));
+        }
+
+        foreach (var candidate in duplicateCaseTags)
+        {
+            diagnosticsBuilder.Add(Diagnostic.Create(
+                descriptor: TaggedUnionDiagnostics.DuplicateCaseTagRule,
+                location: candidate.TagLocation,
+                messageArgs:
+                [
+                    candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                    candidate.Tag,
+                    structDeclarationSyntax.Identifier,
+                ]
+            ));
+        }
+
+        return invalidCaseTags.Count == 0 && duplicateCaseTags.Count == 0;
+
+        #region Local Functions
+        static UnionCaseCandidateContext GetDuplicateCaseTagDiagnosticCandidate(
+            UnionCaseCandidateContext existingCandidate,
+            UnionCaseCandidateContext candidate
+        )
+        {
+            return candidate.IsTagExplicit || !existingCandidate.IsTagExplicit
                 ? candidate
                 : existingCandidate;
         }

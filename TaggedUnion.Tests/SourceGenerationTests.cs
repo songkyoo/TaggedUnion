@@ -1164,6 +1164,7 @@ public sealed class SourceGenerationTests
             """,
             expectedFragments:
             [
+                "_tag = 1;",
                 "global::System.Action<global::Macaron.Union.Tests.Qux<int>> baz",
                 "global::System.Func<global::Macaron.Union.Tests.Qux<int>, TResult> baz"
             ]

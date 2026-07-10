@@ -359,6 +359,119 @@ public sealed class DiagnosticTests
     }
 
     [Test]
+    public void ExplicitZeroCaseTag()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnionCase(typeof(int), tag: 0)]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0009",
+            expectedLocationText: "0"
+        );
+    }
+
+    [Test]
+    public void NegativeCaseTag()
+    {
+        AssertDiagnostic(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnionCase(typeof(int), tag: -1)]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "CS1503"
+        );
+    }
+
+    [Test]
+    public void CaseTagAboveByteRange()
+    {
+        AssertDiagnostic(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnionCase(typeof(int), tag: 256)]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "CS1503"
+        );
+    }
+
+    [Test]
+    public void DuplicateExplicitCaseTag()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnionCase(typeof(int), tag: 42)]
+            [TaggedUnionCase(typeof(string), tag: 0x2A)]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0010",
+            expectedLocationText: "0x2A"
+        );
+    }
+
+    [Test]
+    public void ExplicitCaseTagDuplicatesGeneratedCaseTag()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnionCase(typeof(int), tag: 2)]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0010",
+            expectedLocationText: "2"
+        );
+    }
+
+    [Test]
+    public void ExplicitCaseTagDuplicatesEarlierGeneratedCaseTag()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnionCase(typeof(string), tag: 0x01)]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0010",
+            expectedLocationText: "0x01"
+        );
+    }
+
+    [Test]
     public void MultipleCaseTypeDiagnostics()
     {
         AssertDiagnostics(
