@@ -1,9 +1,8 @@
-﻿using System.Collections.Immutable;
 using System.Text;
-using Microsoft.CodeAnalysis;
 
+using static Macaron.Union.TypeDeclarationHelper;
+using static Macaron.Union.UnionCaseContextHelper;
 using static Macaron.Union.UnionCaseStorageKind;
-using static Microsoft.CodeAnalysis.SymbolDisplayFormat;
 
 namespace Macaron.Union;
 
@@ -11,64 +10,6 @@ internal sealed class TaggedUnionSourceWriter
 {
     #region Constants
     private const string Indent = "    ";
-    #endregion
-
-    #region Static Methods
-    private static ImmutableArray<INamedTypeSymbol> GetContainingTypes(INamedTypeSymbol typeSymbol)
-    {
-        var containingTypes = new List<INamedTypeSymbol>();
-        var parentType = typeSymbol.ContainingType;
-
-        while (parentType != null)
-        {
-            containingTypes.Add(parentType);
-
-            parentType = parentType.ContainingType;
-        }
-
-        containingTypes.Reverse();
-
-        return containingTypes.ToImmutableArray();
-    }
-
-    private static string GetPartialTypeDeclarationString(INamedTypeSymbol typeSymbol)
-    {
-        var typeKind = GetTypeKindString(typeSymbol);
-        var typeName = typeSymbol.ToDisplayString(MinimallyQualifiedFormat);
-
-        return $"partial {typeKind} {typeName}";
-
-        #region Local Functions
-        static string GetTypeKindString(INamedTypeSymbol typeSymbol)
-        {
-            if (typeSymbol.IsRecord)
-            {
-                return typeSymbol.TypeKind is TypeKind.Struct ? "record struct" : "record";
-            }
-
-            return typeSymbol.TypeKind switch
-            {
-                TypeKind.Class => "class",
-                TypeKind.Struct => "struct",
-                TypeKind.Interface => "interface",
-                _ => throw new InvalidOperationException($"Invalid type kind: {typeSymbol.TypeKind}")
-            };
-        }
-        #endregion
-    }
-
-    private static string GetValueAccessorString(UnionCaseContext context)
-    {
-        var storageKind = context.StorageKind;
-
-        return storageKind switch
-        {
-            Reference => "_reference",
-            Unmanaged => $"_unmanaged.Value{context.Tag}",
-            Managed => $"_value{context.Tag}",
-            _ => throw new InvalidOperationException($"Invalid storage kind: {storageKind}")
-        };
-    }
     #endregion
 
     #region Fields
