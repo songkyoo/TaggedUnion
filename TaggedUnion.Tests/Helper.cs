@@ -24,7 +24,7 @@ internal static partial class Helper
 
     public static void AssertGeneratedCode(string sourceCode, int sourceIndex, string expected)
     {
-        var (_, generatedCodes, supportsOfficialUnion) = CompileAndGetResults<TaggedUnionGenerator>(
+        var (_, generatedCodes, _, supportsOfficialUnion) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
         );
@@ -47,7 +47,7 @@ internal static partial class Helper
         params string[] expectedFragments
     )
     {
-        var (_, generatedCodes, _) = CompileAndGetResults<TaggedUnionGenerator>(
+        var (_, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
         );
@@ -67,6 +67,17 @@ internal static partial class Helper
         AssertGeneratedCodeContains(sourceCode, sourceIndex: 0, expectedFragments);
     }
 
+    public static void AssertGeneratedHintName(string sourceCode, string expected)
+    {
+        var (_, _, generatedHintNames, _) = CompileAndGetResults<TaggedUnionGenerator>(
+            sourceCode,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+        );
+
+        Assert.That(generatedHintNames, Has.Length.EqualTo(1));
+        Assert.That(generatedHintNames[0], Is.EqualTo(expected));
+    }
+
     public static void AssertDiagnostic(string sourceCode, string expectedDiagnosticId)
     {
         AssertDiagnostics(sourceCode, expectedDiagnosticId);
@@ -74,7 +85,7 @@ internal static partial class Helper
 
     public static void AssertDiagnostics(string sourceCode, params string[] expectedDiagnosticIds)
     {
-        var (diagnostics, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
+        var (diagnostics, _, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
         );
@@ -92,7 +103,7 @@ internal static partial class Helper
         string expectedLocationText
     )
     {
-        var (diagnostics, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
+        var (diagnostics, _, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
         );
@@ -183,7 +194,12 @@ internal static partial class Helper
         #endregion
     }
 
-    private static (ImmutableArray<Diagnostic> diagnostics, string[] generatedCodes, bool supportsOfficialUnion) CompileAndGetResults<T>(
+    private static (
+        ImmutableArray<Diagnostic> diagnostics,
+        string[] generatedCodes,
+        string[] generatedHintNames,
+        bool supportsOfficialUnion
+    ) CompileAndGetResults<T>(
         string sourceCode,
         Assembly[]? additionalAssemblies = null
     ) where T : IIncrementalGenerator, new()
@@ -199,12 +215,13 @@ internal static partial class Helper
         var result = driver.RunGenerators(compilation).GetRunResult().Results.Single();
         var generatedSources = result.GeneratedSources;
         var generatedCodes = generatedSources.Select(source => source.SourceText.ToString()).ToArray();
+        var generatedHintNames = generatedSources.Select(source => source.HintName).ToArray();
 
         var allDiagnostics = compilation.GetDiagnostics()
             .Concat(result.Diagnostics)
             .ToImmutableArray();
 
-        return (allDiagnostics, generatedCodes, supportsOfficialUnion);
+        return (allDiagnostics, generatedCodes, generatedHintNames, supportsOfficialUnion);
     }
 
     private static CSharpCompilation CreateCompilation(

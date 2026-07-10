@@ -16,7 +16,6 @@ namespace Macaron.Union;
 internal static class UnionContextFactory
 {
     #region Constants
-    private static readonly string TaggedUnionCaseAttributeString = "Macaron.Union.TaggedUnionCaseAttribute";
     private static readonly string AttributeString = "System.Attribute";
     private static readonly string UnionAttributeString = "System.Runtime.CompilerServices.UnionAttribute";
     private static readonly string UnionInterfaceString = "System.Runtime.CompilerServices.IUnion";
@@ -61,7 +60,7 @@ internal static class UnionContextFactory
             attributes: context
                 .TargetSymbol
                 .GetAttributes()
-                .Where(x => x.AttributeClass?.ToDisplayString() == TaggedUnionCaseAttributeString),
+                .Where(x => x.AttributeClass?.ToDisplayString() == TaggedUnionMetadataNames.TaggedUnionCaseAttribute),
             cancellationToken,
             out var caseAttributes
         ))

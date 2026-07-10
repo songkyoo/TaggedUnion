@@ -6,6 +6,23 @@ namespace Macaron.Union.Tests;
 public sealed class SourceGenerationTests
 {
     [Test]
+    public void HintNameIsStable()
+    {
+        AssertGeneratedHintName(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(typeof(int), typeof(string))]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expected: "Foo_0.c82fa166.g.cs"
+        );
+    }
+
+    [Test]
     public void ReferenceCaseTypes()
     {
         AssertGeneratedCode(
