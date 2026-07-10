@@ -36,7 +36,7 @@ internal sealed class TaggedUnionSourceWriter
         AppendLine("#nullable enable");
         AppendLine();
 
-        // namespace start
+        // namespace begin
         var hasNamespace = !unionTypeSymbol.ContainingNamespace.IsGlobalNamespace;
 
         if (hasNamespace)
