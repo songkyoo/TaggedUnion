@@ -37,11 +37,10 @@ internal static class UnionContextFactory
     #region Static Methods
     public static UnionValidationResult Create(
         GeneratorAttributeSyntaxContext context,
+        AttributeData taggedUnionAttribute,
         CancellationToken cancellationToken
     )
     {
-        var taggedUnionAttribute = context.Attributes[0];
-
         if (!TryGetUnionCaseCandidates(taggedUnionAttribute, cancellationToken, out var caseCandidates))
         {
             return new UnionValidationResult.Failure(ImmutableArray<Diagnostic>.Empty);

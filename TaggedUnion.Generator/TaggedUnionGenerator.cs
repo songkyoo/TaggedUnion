@@ -44,7 +44,11 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
             .ForAttributeWithMetadataName(
                 fullyQualifiedMetadataName: TaggedUnionAttributeString,
                 predicate: static (syntaxNode, _) => syntaxNode is StructDeclarationSyntax,
-                transform: UnionContextFactory.Create
+                transform: static (attributeContext, cancellationToken) => UnionContextFactory.Create(
+                    context: attributeContext,
+                    taggedUnionAttribute: attributeContext.Attributes[0],
+                    cancellationToken
+                )
             );
 
         context.RegisterSourceOutput(results, static (sourceProductionContext, result) =>
