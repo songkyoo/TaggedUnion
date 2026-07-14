@@ -15,7 +15,7 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
     #endregion
 
     #region Static Methods
-    private static AnalysisResult? CreateUnionContext(
+    private static AnalysisResult? CreateAnalysisResult(
         GeneratorAttributeSyntaxContext context,
         CancellationToken cancellationToken
     )
@@ -25,9 +25,36 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
             .GetAttributes()
             .FirstOrDefault(attribute => attribute.AttributeClass?.ToDisplayString() == TaggedUnionAttribute);
 
-        return taggedUnionAttribute != null
-            ? UnionGenerationModelFactory.Create(context, taggedUnionAttribute, cancellationToken)
-            : null;
+        if (taggedUnionAttribute != null)
+        {
+            var result = UnionGenerationModelFactory.Create(
+                context,
+                taggedUnionAttribute,
+                cancellationToken
+            );
+
+            return result is AnalysisResult.Success ? result : null;
+        }
+
+        var structDeclarationSyntax = (StructDeclarationSyntax)context.TargetNode;
+        var location = GetLocation(context, cancellationToken);
+        var diagnostic = Diagnostic.Create(
+            descriptor: TaggedUnionJsonSerializerDiagnostics.TaggedUnionAttributeRequiredRule,
+            location,
+            messageArgs: [structDeclarationSyntax.Identifier]
+        );
+
+        return new AnalysisResult.Failure(diagnostic);
+
+        #region Local Functions
+        static Location GetLocation(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
+        {
+            var applicationSyntaxReference = context.Attributes[0].ApplicationSyntaxReference;
+            var location = applicationSyntaxReference?.GetSyntax(cancellationToken).GetLocation();
+
+            return location ?? context.TargetNode.GetLocation();
+        }
+        #endregion
     }
 
     private static SourceText GenerateSourceText(UnionGenerationModel model)
@@ -47,15 +74,13 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
             .ForAttributeWithMetadataName(
                 fullyQualifiedMetadataName: TaggedUnionJsonSerializerAttributeMetadataName,
                 predicate: static (syntaxNode, _) => syntaxNode is StructDeclarationSyntax,
-                transform: CreateUnionContext
-            )
-            .Where(static result => result != null)
-            .Select(static (result, _) => result!);
+                transform: CreateAnalysisResult
+            );
 
         context.RegisterSourceOutput(
             source: analysisResultProvider
-                .Where(x => x is AnalysisResult.Failure)
-                .Select((x, _) => ((AnalysisResult.Failure)x).Diagnostics),
+                .Where(static x => x is AnalysisResult.Failure)
+                .Select(static (x, _) => ((AnalysisResult.Failure)x!).Diagnostics),
             action: static (sourceProductionContext, diagnostics) =>
             {
                 foreach (var diagnostic in diagnostics)
@@ -64,15 +89,12 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
                 }
             }
         );
-
-        var modelProvider = analysisResultProvider
-            .Where(static x => x is AnalysisResult.Success)
-            .Select(static (x, _) => ((AnalysisResult.Success)x).Model)
-            .WithComparer(UnionGenerationModelComparer.Instance)
-            .WithTrackingName(nameof(UnionGenerationModel));
-
         context.RegisterSourceOutput(
-            source: modelProvider,
+            source: analysisResultProvider
+                .Where(static x => x is AnalysisResult.Success)
+                .Select(static (x, _) => ((AnalysisResult.Success)x!).Model)
+                .WithComparer(UnionGenerationModelComparer.Instance)
+                .WithTrackingName(nameof(UnionGenerationModel)),
             static (sourceProductionContext, model) =>
             {
                 var hintName = $"{model.HintName}.JsonSerializer.g.cs";

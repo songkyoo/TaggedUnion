@@ -7,5 +7,10 @@ internal abstract record AnalysisResult
 {
     public sealed record Success(UnionGenerationModel Model) : AnalysisResult;
 
-    public sealed record Failure(ImmutableArray<Diagnostic> Diagnostics) : AnalysisResult;
+    public sealed record Failure(ImmutableArray<Diagnostic> Diagnostics) : AnalysisResult
+    {
+        public Failure(Diagnostic diagnostic) : this(ImmutableArray.Create(diagnostic))
+        {
+        }
+    }
 }

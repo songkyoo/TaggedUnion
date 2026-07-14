@@ -68,11 +68,6 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                     cancellationToken
                 )
             );
-        var modelProvider = analysisResultProvider
-            .Where(static x => x is AnalysisResult.Success)
-            .Select(static (x, _) => ((AnalysisResult.Success)x).Model)
-            .WithComparer(UnionGenerationModelComparer.Instance)
-            .WithTrackingName(nameof(UnionGenerationModel));
 
         context.RegisterSourceOutput(
             source: analysisResultProvider
@@ -87,7 +82,11 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
             }
         );
         context.RegisterSourceOutput(
-            source: modelProvider,
+            source: analysisResultProvider
+                .Where(static x => x is AnalysisResult.Success)
+                .Select(static (x, _) => ((AnalysisResult.Success)x).Model)
+                .WithComparer(UnionGenerationModelComparer.Instance)
+                .WithTrackingName(nameof(UnionGenerationModel)),
             static (sourceProductionContext, model) =>
             {
                 var hintName = $"{model.HintName}.g.cs";
