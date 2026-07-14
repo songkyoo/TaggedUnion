@@ -3,7 +3,9 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
+using static Macaron.Union.HintNameHelper;
 using static Macaron.Union.StringHelper;
+using static Macaron.Union.TypeDeclarationHelper;
 using static Macaron.Union.UnionCaseStorageKind;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxKind;
 using static Microsoft.CodeAnalysis.SpecialType;
@@ -13,7 +15,7 @@ using static Microsoft.CodeAnalysis.TypeKind;
 
 namespace Macaron.Union;
 
-internal static class UnionContextFactory
+internal static class UnionGenerationModelFactory
 {
     #region Constants
     private static readonly string AttributeString = "System.Attribute";
@@ -34,7 +36,7 @@ internal static class UnionContextFactory
     #endregion
 
     #region Static Methods
-    public static UnionValidationResult Create(
+    public static AnalysisResult Create(
         GeneratorAttributeSyntaxContext context,
         AttributeData taggedUnionAttribute,
         CancellationToken cancellationToken
@@ -42,7 +44,7 @@ internal static class UnionContextFactory
     {
         if (!TryGetUnionCaseCandidates(taggedUnionAttribute, cancellationToken, out var caseCandidates))
         {
-            return new UnionValidationResult.Failure(ImmutableArray<Diagnostic>.Empty);
+            return new AnalysisResult.Failure(ImmutableArray<Diagnostic>.Empty);
         }
 
         var structDeclarationSyntax = (StructDeclarationSyntax)context.TargetNode;
@@ -53,7 +55,7 @@ internal static class UnionContextFactory
 
         if (targetTypeSymbol == null)
         {
-            return new UnionValidationResult.Failure(ImmutableArray<Diagnostic>.Empty);
+            return new AnalysisResult.Failure(ImmutableArray<Diagnostic>.Empty);
         }
 
         if (!TryGetCaseAttributeContexts(
@@ -65,7 +67,7 @@ internal static class UnionContextFactory
             out var caseAttributes
         ))
         {
-            return new UnionValidationResult.Failure(ImmutableArray<Diagnostic>.Empty);
+            return new AnalysisResult.Failure(ImmutableArray<Diagnostic>.Empty);
         }
 
         var diagnosticsBuilder = ImmutableArray.CreateBuilder<Diagnostic>();
@@ -106,33 +108,39 @@ internal static class UnionContextFactory
 
         if (!isValid)
         {
-            return new UnionValidationResult.Failure(diagnosticsBuilder.ToImmutable());
+            return new AnalysisResult.Failure(diagnosticsBuilder.ToImmutable());
         }
 
-        var caseContextsBuilder = ImmutableArray.CreateBuilder<UnionCaseContext>();
+        var casesBuilder = ImmutableArray.CreateBuilder<UnionCaseGenerationModel>();
 
         foreach (var caseCandidate in caseCandidates)
         {
             var caseTypeSymbol = caseCandidate.TypeSymbol;
-            var caseContext = new UnionCaseContext(
+            var caseModel = new UnionCaseGenerationModel(
                 StorageKind: GetCaseStorageKind(caseTypeSymbol),
                 FullyQualifiedTypeName: GetCaseTypeName(caseTypeSymbol),
                 ParamName: caseCandidate.ParamName,
                 Tag: caseCandidate.Tag
             );
 
-            caseContextsBuilder.Add(caseContext);
+            casesBuilder.Add(caseModel);
         }
 
-        var unionTypeSymbol = (INamedTypeSymbol)context.TargetSymbol;
-        var unionContext = new UnionContext(
-            TypeSymbol: unionTypeSymbol,
-            TypeName: unionTypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+        var typeSymbol = (INamedTypeSymbol)context.TargetSymbol;
+        var model = new UnionGenerationModel(
             SupportsOfficialUnion: SupportsOfficialUnion(context.SemanticModel.Compilation),
-            CaseContexts: caseContextsBuilder.ToImmutable()
+            Namespace: !typeSymbol.ContainingNamespace.IsGlobalNamespace
+                ? typeSymbol.ContainingNamespace.ToDisplayString()
+                : "",
+            ContainingTypes: GetContainingTypes(typeSymbol)
+                .Select(GetPartialTypeDeclarationString)
+                .ToImmutableArray(),
+            TypeName: typeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+            Cases: casesBuilder.ToImmutable(),
+            HintName: GetTypeHintName(typeSymbol)
         );
 
-        return new UnionValidationResult.Success(unionContext);
+        return new AnalysisResult.Success(model);
 
         #region Local Functions
         static ImmutableDictionary<ITypeSymbol, TaggedUnionCaseAttributeContext> CreateCaseAttributeMap(

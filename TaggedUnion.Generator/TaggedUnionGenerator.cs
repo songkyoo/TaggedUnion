@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
-using static Macaron.Union.HintNameHelper;
 using static Macaron.Union.TaggedUnionMetadataNames;
 
 namespace Macaron.Union;
@@ -12,9 +11,9 @@ namespace Macaron.Union;
 public sealed class TaggedUnionGenerator : IIncrementalGenerator
 {
     #region Static Methods
-    private static SourceText GenerateSourceText(UnionContext context)
+    private static SourceText GenerateSourceText(UnionGenerationModel model)
     {
-        var writer = new TaggedUnionSourceWriter(context);
+        var writer = new TaggedUnionSourceWriter(model);
         var source = writer.Generate();
 
         return SourceText.From(source, Encoding.UTF8);
@@ -24,42 +23,42 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
     #region IIncrementalGenerator Interface
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var results = context
+        var analysisResultProvider = context
             .SyntaxProvider
             .ForAttributeWithMetadataName(
                 fullyQualifiedMetadataName: TaggedUnionAttribute,
-                predicate: static (syntaxNode, _) => syntaxNode is StructDeclarationSyntax,
-                transform: static (attributeContext, cancellationToken) => UnionContextFactory.Create(
+                predicate: (syntaxNode, _) => syntaxNode is StructDeclarationSyntax,
+                transform: (attributeContext, cancellationToken) => UnionGenerationModelFactory.Create(
                     context: attributeContext,
                     taggedUnionAttribute: attributeContext.Attributes[0],
                     cancellationToken
                 )
             );
 
-        context.RegisterSourceOutput(results, static (sourceProductionContext, result) =>
-        {
-            switch (result)
+        context.RegisterSourceOutput(
+            source: analysisResultProvider
+                .Where(x => x is AnalysisResult.Failure)
+                .Select((x, _) => ((AnalysisResult.Failure)x).Diagnostics),
+            action: static (sourceProductionContext, diagnostics) =>
             {
-                case UnionValidationResult.Failure { Diagnostics: var diagnostics }:
+                foreach (var diagnostic in diagnostics)
                 {
-                    foreach (var diagnostic in diagnostics)
-                    {
-                        sourceProductionContext.ReportDiagnostic(diagnostic);
-                    }
-
-                    return;
-                }
-                case UnionValidationResult.Success { Context: var context }:
-                {
-                    var hintName = $"{GetTypeHintName(context.TypeSymbol)}.g.cs";
-                    var sourceText = GenerateSourceText(context);
-
-                    sourceProductionContext.AddSource(hintName, sourceText);
-
-                    return;
+                    sourceProductionContext.ReportDiagnostic(diagnostic);
                 }
             }
-        });
+        );
+        context.RegisterSourceOutput(
+            source: analysisResultProvider
+                .Where(x => x is AnalysisResult.Success)
+                .Select((x, _) => ((AnalysisResult.Success)x).Model),
+            static (sourceProductionContext, model) =>
+            {
+                var hintName = $"{model.HintName}.g.cs";
+                var sourceText = GenerateSourceText(model);
+
+                sourceProductionContext.AddSource(hintName, sourceText);
+            }
+        );
     }
     #endregion
 }

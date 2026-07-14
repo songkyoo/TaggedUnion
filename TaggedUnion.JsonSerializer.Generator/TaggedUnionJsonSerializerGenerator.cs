@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
-using static Macaron.Union.HintNameHelper;
 using static Macaron.Union.TaggedUnionMetadataNames;
 
 namespace Macaron.Union;
@@ -16,7 +15,7 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
     #endregion
 
     #region Static Methods
-    private static UnionValidationResult? CreateUnionContext(
+    private static AnalysisResult? CreateUnionContext(
         GeneratorAttributeSyntaxContext context,
         CancellationToken cancellationToken
     )
@@ -27,13 +26,13 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
             .FirstOrDefault(attribute => attribute.AttributeClass?.ToDisplayString() == TaggedUnionAttribute);
 
         return taggedUnionAttribute != null
-            ? UnionContextFactory.Create(context, taggedUnionAttribute, cancellationToken)
+            ? UnionGenerationModelFactory.Create(context, taggedUnionAttribute, cancellationToken)
             : null;
     }
 
-    private static SourceText GenerateSourceText(UnionContext context)
+    private static SourceText GenerateSourceText(UnionGenerationModel model)
     {
-        var writer = new TaggedUnionJsonSerializerSourceWriter(context);
+        var writer = new TaggedUnionJsonSerializerSourceWriter(model);
         var source = writer.Generate();
 
         return SourceText.From(source, Encoding.UTF8);
@@ -43,7 +42,7 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
     #region IIncrementalGenerator Interface
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var results = context
+        var analysisResultProvider = context
             .SyntaxProvider
             .ForAttributeWithMetadataName(
                 fullyQualifiedMetadataName: TaggedUnionJsonSerializerAttributeMetadataName,
@@ -53,18 +52,30 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
             .Where(static result => result != null)
             .Select(static (result, _) => result!);
 
-        context.RegisterSourceOutput(results, static (sourceProductionContext, result) =>
-        {
-            if (result is not UnionValidationResult.Success { Context: var context })
+        context.RegisterSourceOutput(
+            source: analysisResultProvider
+                .Where(x => x is AnalysisResult.Failure)
+                .Select((x, _) => ((AnalysisResult.Failure)x).Diagnostics),
+            action: static (sourceProductionContext, diagnostics) =>
             {
-                return;
+                foreach (var diagnostic in diagnostics)
+                {
+                    sourceProductionContext.ReportDiagnostic(diagnostic);
+                }
             }
+        );
+        context.RegisterSourceOutput(
+            source: analysisResultProvider
+                .Where(x => x is AnalysisResult.Success)
+                .Select((x, _) => ((AnalysisResult.Success)x).Model),
+            static (sourceProductionContext, model) =>
+            {
+                var hintName = $"{model.HintName}.JsonSerializer.g.cs";
+                var sourceText = GenerateSourceText(model);
 
-            var hintName = $"{GetTypeHintName(context.TypeSymbol)}.JsonSerializer.g.cs";
-            var sourceText = GenerateSourceText(context);
-
-            sourceProductionContext.AddSource(hintName, sourceText);
-        });
+                sourceProductionContext.AddSource(hintName, sourceText);
+            }
+        );
     }
     #endregion
 }

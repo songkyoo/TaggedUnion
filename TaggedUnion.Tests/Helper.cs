@@ -8,9 +8,9 @@ namespace Macaron.Union.Tests;
 
 internal static partial class Helper
 {
-    private const string AttributeString = "System.Attribute";
-    private const string UnionAttributeString = "System.Runtime.CompilerServices.UnionAttribute";
-    private const string UnionInterfaceString = "System.Runtime.CompilerServices.IUnion";
+    private const string AttributeMetadataName = "System.Attribute";
+    private const string UnionAttributeMetadataName = "System.Runtime.CompilerServices.UnionAttribute";
+    private const string UnionInterfaceMetadataName = "System.Runtime.CompilerServices.IUnion";
 
     private static readonly CSharpParseOptions ParseOptions = CSharpParseOptions.Default.WithLanguageVersion(
         LanguageVersion.Preview
@@ -196,8 +196,8 @@ internal static partial class Helper
 
     private static bool SupportsOfficialUnion(Compilation compilation)
     {
-        var unionAttributeSymbol = compilation.GetTypeByMetadataName(UnionAttributeString);
-        var unionInterfaceSymbol = compilation.GetTypeByMetadataName(UnionInterfaceString);
+        var unionAttributeSymbol = compilation.GetTypeByMetadataName(UnionAttributeMetadataName);
+        var unionInterfaceSymbol = compilation.GetTypeByMetadataName(UnionInterfaceMetadataName);
 
         return IsUnionAttribute(unionAttributeSymbol, compilation)
                && IsUnionInterface(unionInterfaceSymbol, compilation);
@@ -210,7 +210,7 @@ internal static partial class Helper
                 return false;
             }
 
-            var attributeSymbol = compilation.GetTypeByMetadataName(AttributeString);
+            var attributeSymbol = compilation.GetTypeByMetadataName(AttributeMetadataName);
             var currentSymbol = symbol;
 
             while (currentSymbol != null)

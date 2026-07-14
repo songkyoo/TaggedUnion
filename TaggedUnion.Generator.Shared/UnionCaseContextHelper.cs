@@ -2,16 +2,16 @@ using static Macaron.Union.UnionCaseStorageKind;
 
 namespace Macaron.Union;
 
-internal static class UnionCaseContextHelper
+internal static class UnionCaseGenerationModelHelper
 {
-    public static string GetValueAccessorString(UnionCaseContext context)
+    public static string GetValueAccessorString(UnionCaseGenerationModel model)
     {
-        return context.StorageKind switch
+        return model.StorageKind switch
         {
             Reference => "_reference",
-            Unmanaged => $"_unmanaged.Value{context.Tag}",
-            Managed => $"_value{context.Tag}",
-            _ => throw new InvalidOperationException($"Invalid storage kind: {context.StorageKind}")
+            Unmanaged => $"_unmanaged.Value{model.Tag}",
+            Managed => $"_value{model.Tag}",
+            _ => throw new InvalidOperationException($"Invalid storage kind: {model.StorageKind}")
         };
     }
 }
