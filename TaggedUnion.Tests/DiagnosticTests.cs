@@ -337,6 +337,24 @@ public sealed class DiagnosticTests
     }
 
     [Test]
+    public void CaseAttributeWithoutTaggedUnionAttribute()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnionCase(typeof(int))]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0011",
+            expectedLocationText: "TaggedUnionCase(typeof(int))"
+        );
+    }
+
+    [Test]
     public void UnresolvedCaseAttributeType()
     {
         AssertDiagnostic(

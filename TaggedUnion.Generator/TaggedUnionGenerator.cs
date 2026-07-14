@@ -11,6 +11,40 @@ namespace Macaron.Union;
 public sealed class TaggedUnionGenerator : IIncrementalGenerator
 {
     #region Static Methods
+    private static Diagnostic? CreateMissingTaggedUnionAttributeDiagnostic(
+        GeneratorAttributeSyntaxContext context,
+        CancellationToken cancellationToken
+    )
+    {
+        if (context.TargetSymbol.GetAttributes().Any(attribute =>
+            {
+                return attribute.AttributeClass?.ToDisplayString() == TaggedUnionAttribute;
+            })
+        )
+        {
+            return null;
+        }
+
+        var structDeclarationSyntax = (StructDeclarationSyntax)context.TargetNode;
+        var location = GetLocation(context, cancellationToken);
+
+        return Diagnostic.Create(
+            descriptor: TaggedUnionDiagnostics.CaseAttributeRequiresTaggedUnionAttributeRule,
+            location,
+            messageArgs: [structDeclarationSyntax.Identifier]
+        );
+
+        #region Local Functions
+        static Location GetLocation(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
+        {
+            var applicationSyntaxReference = context.Attributes[0].ApplicationSyntaxReference;
+            var location = applicationSyntaxReference?.GetSyntax(cancellationToken).GetLocation();
+
+            return location ?? context.TargetNode.GetLocation();
+        }
+        #endregion
+    }
+
     private static SourceText GenerateSourceText(UnionGenerationModel model)
     {
         var writer = new TaggedUnionSourceWriter(model);
@@ -34,6 +68,11 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                     cancellationToken
                 )
             );
+        var modelProvider = analysisResultProvider
+            .Where(static x => x is AnalysisResult.Success)
+            .Select(static (x, _) => ((AnalysisResult.Success)x).Model)
+            .WithComparer(UnionGenerationModelComparer.Instance)
+            .WithTrackingName(nameof(UnionGenerationModel));
 
         context.RegisterSourceOutput(
             source: analysisResultProvider
@@ -47,13 +86,6 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 }
             }
         );
-
-        var modelProvider = analysisResultProvider
-            .Where(static x => x is AnalysisResult.Success)
-            .Select(static (x, _) => ((AnalysisResult.Success)x).Model)
-            .WithComparer(UnionGenerationModelComparer.Instance)
-            .WithTrackingName(nameof(UnionGenerationModel));
-
         context.RegisterSourceOutput(
             source: modelProvider,
             static (sourceProductionContext, model) =>
@@ -63,6 +95,23 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
 
                 sourceProductionContext.AddSource(hintName, sourceText);
             }
+        );
+
+        // TaggedUnionCase만 있는 경우의 진단
+        var missingTaggedUnionAttributeDiagnosticProvider = context
+            .SyntaxProvider
+            .ForAttributeWithMetadataName(
+                fullyQualifiedMetadataName: TaggedUnionCaseAttribute,
+                predicate: static (syntaxNode, _) => syntaxNode is StructDeclarationSyntax,
+                transform: CreateMissingTaggedUnionAttributeDiagnostic
+            )
+            .Where(static diagnostic => diagnostic != null)
+            .Select(static (diagnostic, _) => diagnostic!);
+
+        context.RegisterSourceOutput(
+            source: missingTaggedUnionAttributeDiagnosticProvider,
+            action: static (sourceProductionContext, diagnostic) =>
+                sourceProductionContext.ReportDiagnostic(diagnostic)
         );
     }
     #endregion

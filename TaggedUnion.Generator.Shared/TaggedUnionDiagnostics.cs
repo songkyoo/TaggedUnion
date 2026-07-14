@@ -93,4 +93,13 @@ internal static class TaggedUnionDiagnostics
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
+
+    public static readonly DiagnosticDescriptor CaseAttributeRequiresTaggedUnionAttributeRule = new(
+        id: "MTU0011",
+        title: "TaggedUnionCase requires TaggedUnion",
+        messageFormat: "Target type '{0}' with a TaggedUnionCase attribute must also have a TaggedUnion attribute.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
 }
