@@ -166,7 +166,8 @@ internal static partial class Helper
         string sourceCode,
         Assembly[]? additionalAssemblies,
         string assemblyName,
-        ISourceGenerator[] generators
+        ISourceGenerator[] generators,
+        GeneratorDriverOptions? driverOptions = null
     )
     {
         var references = AppDomain
@@ -189,7 +190,13 @@ internal static partial class Helper
                 nullableContextOptions: NullableContextOptions.Enable
             )
         );
-        var driver = CSharpGeneratorDriver.Create(generators, parseOptions: ParseOptions);
+        var driver = CSharpGeneratorDriver.Create(
+            generators,
+            additionalTexts: null,
+            parseOptions: ParseOptions,
+            optionsProvider: null,
+            driverOptions: driverOptions ?? default
+        );
 
         return (compilation, driver);
     }

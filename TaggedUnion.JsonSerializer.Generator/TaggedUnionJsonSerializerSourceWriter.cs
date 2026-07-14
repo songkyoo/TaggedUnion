@@ -1,6 +1,5 @@
 using System.Text;
 
-using static Macaron.Union.TypeDeclarationHelper;
 using static Macaron.Union.UnionCaseGenerationModelHelper;
 using static Macaron.Union.UnionCaseStorageKind;
 

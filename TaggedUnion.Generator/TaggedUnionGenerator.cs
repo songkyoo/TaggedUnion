@@ -47,10 +47,15 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 }
             }
         );
+
+        var modelProvider = analysisResultProvider
+            .Where(static x => x is AnalysisResult.Success)
+            .Select(static (x, _) => ((AnalysisResult.Success)x).Model)
+            .WithComparer(UnionGenerationModelComparer.Instance)
+            .WithTrackingName(nameof(UnionGenerationModel));
+
         context.RegisterSourceOutput(
-            source: analysisResultProvider
-                .Where(x => x is AnalysisResult.Success)
-                .Select((x, _) => ((AnalysisResult.Success)x).Model),
+            source: modelProvider,
             static (sourceProductionContext, model) =>
             {
                 var hintName = $"{model.HintName}.g.cs";
