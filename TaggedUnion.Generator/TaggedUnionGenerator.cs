@@ -67,7 +67,8 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                     taggedUnionAttribute: attributeContext.Attributes[0],
                     cancellationToken
                 )
-            );
+            )
+            .WithTrackingName(nameof(AnalysisResult));
 
         context.RegisterSourceOutput(
             source: analysisResultProvider
@@ -85,7 +86,6 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
             source: analysisResultProvider
                 .Where(static x => x is AnalysisResult.Success)
                 .Select(static (x, _) => ((AnalysisResult.Success)x).Model)
-                .WithComparer(UnionGenerationModelComparer.Instance)
                 .WithTrackingName(nameof(UnionGenerationModel)),
             static (sourceProductionContext, model) =>
             {

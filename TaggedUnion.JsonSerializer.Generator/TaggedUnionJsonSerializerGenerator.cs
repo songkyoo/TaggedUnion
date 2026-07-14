@@ -75,7 +75,8 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
                 fullyQualifiedMetadataName: TaggedUnionJsonSerializerAttributeMetadataName,
                 predicate: static (syntaxNode, _) => syntaxNode is StructDeclarationSyntax,
                 transform: CreateAnalysisResult
-            );
+            )
+            .WithTrackingName(nameof(AnalysisResult));
 
         context.RegisterSourceOutput(
             source: analysisResultProvider
@@ -93,7 +94,6 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
             source: analysisResultProvider
                 .Where(static x => x is AnalysisResult.Success)
                 .Select(static (x, _) => ((AnalysisResult.Success)x!).Model)
-                .WithComparer(UnionGenerationModelComparer.Instance)
                 .WithTrackingName(nameof(UnionGenerationModel)),
             static (sourceProductionContext, model) =>
             {

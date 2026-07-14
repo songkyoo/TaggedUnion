@@ -10,6 +10,7 @@ namespace Macaron.Union.Tests;
 public sealed class IncrementalCachingTests
 {
     #region Constants
+    private const string AnalysisResultTrackingName = "AnalysisResult";
     private const string ModelTrackingName = "UnionGenerationModel";
     #endregion
 
@@ -35,7 +36,7 @@ public sealed class IncrementalCachingTests
             [TaggedUnion(typeof(int), typeof(string))]
             public readonly partial struct Foo
             {
-                // This edit does not change the generation model.
+                public static int IgnoredByGenerationModel => 42;
             }
             """,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
@@ -65,7 +66,7 @@ public sealed class IncrementalCachingTests
             [TaggedUnionJsonSerializer]
             public readonly partial struct Foo
             {
-                // This edit does not change the generation model.
+                public static int IgnoredByGenerationModel => 42;
             }
             """,
             additionalAssemblies:
@@ -107,6 +108,7 @@ public sealed class IncrementalCachingTests
         trackingDriver = trackingDriver.RunGenerators(updatedCompilation);
 
         var result = trackingDriver.GetRunResult().Results.Single();
+        var analysisResultReasons = GetRunReasons(result.TrackedSteps, AnalysisResultTrackingName);
         var modelReasons = GetRunReasons(result.TrackedSteps, ModelTrackingName);
         var outputReasons = result
             .TrackedOutputSteps
@@ -118,7 +120,8 @@ public sealed class IncrementalCachingTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(modelReasons, Is.EqualTo(new[] { IncrementalStepRunReason.Unchanged }));
+            Assert.That(analysisResultReasons, Is.EqualTo(new[] { IncrementalStepRunReason.Unchanged }));
+            Assert.That(modelReasons, Is.EqualTo(new[] { IncrementalStepRunReason.Cached }));
             Assert.That(outputReasons, Does.Contain(IncrementalStepRunReason.Cached));
             Assert.That(outputReasons, Does.Not.Contain(IncrementalStepRunReason.Modified));
         });
