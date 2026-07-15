@@ -66,6 +66,8 @@ partial struct IntOrString : global::System.IEquatable<IntOrString>
 }
 ```
 
+대상 타입이 인터페이스인 경우 C# 기본 정책에 따라 캐스팅 연산자를 생성하지 않습니다.
+
 ### 유니온에 포함되는 타입의 제약
 
 - 타입은 최소 2개, 최대 8개까지 지정할 수 있습니다.
@@ -74,7 +76,7 @@ partial struct IntOrString : global::System.IEquatable<IntOrString>
 
 ### 유니온 인스턴스 생성하기
 
-유니온에 포함된 타입은 암시적으로 유니온 타입으로 변환됩니다.
+유니온에 포함된 타입은 암시적으로 유니온 타입으로 변환됩니다.(인터페이스 타입 제외)
 
 ```csharp
 IntOrString number = 42;

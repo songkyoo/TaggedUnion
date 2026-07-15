@@ -1217,6 +1217,42 @@ public sealed class SourceGenerationTests
     }
 
     [Test]
+    public void InterfaceCaseTypeDoesNotGenerateConversionOperators()
+    {
+        var (_, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public interface IQux
+            {
+            }
+
+            [TaggedUnion(typeof(IQux), typeof(string))]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+        );
+        var generatedCode = generatedCodes.Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                generatedCode,
+                Does.Not.Contain("implicit operator Foo(global::Macaron.Union.Tests.IQux value)")
+            );
+            Assert.That(
+                generatedCode,
+                Does.Not.Contain("explicit operator global::Macaron.Union.Tests.IQux(Foo value)")
+            );
+            Assert.That(generatedCode, Does.Contain("implicit operator Foo(string value)"));
+            Assert.That(generatedCode, Does.Contain("explicit operator string(Foo value)"));
+        });
+    }
+
+    [Test]
     public void NullableCaseParameterNameRemovesNullableAnnotation()
     {
         AssertGeneratedCodeContains(

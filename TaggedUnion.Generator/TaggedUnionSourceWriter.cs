@@ -167,7 +167,10 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
     private void WriteConversionOperators()
     {
         var typeName = model.TypeName;
-        var caseContexts = model.Cases;
+        var caseContexts = model
+            .Cases
+            .Where(x => x.SupportsConversionOperators)
+            .ToArray();
 
         AppendLine("#region Conversion Operators");
 
