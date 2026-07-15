@@ -18,9 +18,9 @@ namespace Macaron.Union;
 internal static class UnionGenerationModelFactory
 {
     #region Constants
-    private static readonly string AttributeString = "System.Attribute";
-    private static readonly string UnionAttributeString = "System.Runtime.CompilerServices.UnionAttribute";
-    private static readonly string UnionInterfaceString = "System.Runtime.CompilerServices.IUnion";
+    private const string AttributeString = "System.Attribute";
+    private const string UnionAttributeString = "System.Runtime.CompilerServices.UnionAttribute";
+    private const string UnionInterfaceString = "System.Runtime.CompilerServices.IUnion";
     #endregion
 
     #region Types
@@ -111,6 +111,13 @@ internal static class UnionGenerationModelFactory
             return new AnalysisResult.Failure(diagnosticsBuilder.ToImmutable());
         }
 
+        var generateConversionOperators = taggedUnionAttribute
+            .NamedArguments
+            .Any(x => x is
+            {
+                Key: TaggedUnionMetadataNames.GenerateConversionOperatorsProperty,
+                Value.Value: true,
+            });
         var casesBuilder = ImmutableArray.CreateBuilder<UnionCaseGenerationModel>();
 
         foreach (var caseCandidate in caseCandidates)
@@ -118,7 +125,7 @@ internal static class UnionGenerationModelFactory
             var caseTypeSymbol = caseCandidate.TypeSymbol;
             var caseModel = new UnionCaseGenerationModel(
                 StorageKind: GetCaseStorageKind(caseTypeSymbol),
-                SupportsConversionOperators: caseTypeSymbol.TypeKind != Interface,
+                SupportsConversionOperators: generateConversionOperators && caseTypeSymbol.TypeKind != Interface,
                 FullyQualifiedTypeName: GetCaseTypeName(caseTypeSymbol),
                 ParamName: caseCandidate.ParamName,
                 Tag: caseCandidate.Tag

@@ -33,12 +33,6 @@ partial struct IntOrString : global::System.IEquatable<IntOrString>
     public static bool operator ==(IntOrString left, IntOrString right);
     public static bool operator !=(IntOrString left, IntOrString right);
 
-    public static implicit operator IntOrString(int value);
-    public static explicit operator int(IntOrString value);
-
-    public static implicit operator IntOrString(string value);
-    public static explicit operator string(IntOrString value);
-
     public IntOrString(int value);
     public IntOrString(string value);
 
@@ -56,17 +50,13 @@ partial struct IntOrString : global::System.IEquatable<IntOrString>
 
     public void Switch(
         global::System.Action<int> @int,
-        global::System.Action<string> @string
-    );
+        global::System.Action<string> @string);
 
     public TResult Match<TResult>(
         global::System.Func<int, TResult> @int,
-        global::System.Func<string, TResult> @string
-    );
+        global::System.Func<string, TResult> @string);
 }
 ```
-
-대상 타입이 인터페이스인 경우 C# 기본 정책에 따라 캐스팅 연산자를 생성하지 않습니다.
 
 ### 유니온에 포함되는 타입의 제약
 
@@ -76,21 +66,43 @@ partial struct IntOrString : global::System.IEquatable<IntOrString>
 
 ### 유니온 인스턴스 생성하기
 
-유니온에 포함된 타입은 암시적으로 유니온 타입으로 변환됩니다.(인터페이스 타입 제외)
+기본적으로 유니온 타입의 생성자를 사용합니다.
 
 ```csharp
+var number = new IntOrString(42);
+IntOrString text = new("hello");
+```
+
+### 캐스팅 연산자 생성하기
+
+어트리뷰트에 `GenerateConversionOperators`를 `true`로 지정하면 각 타입에서 유니온 타입으로의 암시적 캐스팅과 유니온 타입에서 각 타입으로의 명시적 캐스팅을 생성합니다.
+
+```csharp
+[TaggedUnion(
+    typeof(int),
+    typeof(string),
+    GenerateConversionOperators = true)]
+public readonly partial struct IntOrString
+{
+}
+
 IntOrString number = 42;
 IntOrString text = "hello";
+var value = (int)number;
 ```
+
+인터페이스 타입은 C# 언어 제약으로 인해 이 옵션을 활성화해도 캐스팅 연산자를 생성하지 않습니다.
 
 ### 값을 사용하기
 
 값을 꺼낼 때는 `Value`, `TryGetValue`, 사용할 때는 `Switch`, `Match`를 쓸 수 있습니다.
 
+#### Value 프로퍼티
+
 `Value`는 `object?`를 반환합니다. 차후 도입될 C#의 유니온 문법에 대한 호환성을 위해 존재하는 프로퍼티로 타입 정확성과 전체 타입을 사용했는지에 대한 보장이 없고 값 타입인 경우 박싱이 발생하기 때문에 권장하지 않습니다.
 
 ```csharp
-var intOrString = (IntOrString)42;
+var intOrString = new IntOrString(42);
 
 var result = intOrString.Value switch
 {
@@ -99,6 +111,8 @@ var result = intOrString.Value switch
     _ => -1,
 };
 ```
+
+#### TryGetValue 메서드
 
 `TryGetValue`를 사용하여 값 타입도 박싱 없이 값을 꺼낼 수 있습니다.
 
@@ -113,23 +127,23 @@ else if (intOrString.TryGetValue(out string? stringVal))
 }
 ```
 
+#### Switch, Match 메서드
+
 `Switch`, `Match`는 각 타입에 대한 델리게이트를 사용하여 값을 처리할 수 있습니다. 값이 할당되지 않은 유니온 인스턴스에 이 메서드를 호출하면 예외가 발생합니다.
 
 ```csharp
 // 반환 값이 없는 경우 Switch
 intOrString.Switch(
     @int: value => Console.WriteLine($"int: {value}"),
-    @string: value => Console.WriteLine($"string: {value}")
-);
+    @string: value => Console.WriteLine($"string: {value}"));
 
 // 반환 값이 있는 경우 Match
 var result = number.Match(
     @int: value => $"int: {value}",
-    @string: value => $"string: {value}"
-);
+    @string: value => $"string: {value}");
 ```
 
-## Switch, Match의 매개변수 이름
+##### Switch, Match의 매개변수 이름
 
 `Switch`와 `Match`의 매개변수 이름은 기본적으로 제네릭을 제외한 타입의 이름을 사용합니다. 다만 타입이 인터페이스인 경우 타입의 이름이 `I`로 시작하고 두 번째 문자가 대문자라면 `I`를 제외한 이름을 사용합니다.
 

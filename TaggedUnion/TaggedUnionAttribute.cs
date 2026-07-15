@@ -7,6 +7,8 @@ namespace Macaron.Union;
 public sealed class TaggedUnionAttribute : Attribute
 {
     #region Properties
+    public bool GenerateConversionOperators { get; set; }
+
     public IReadOnlyList<Type> Types { get; }
     #endregion
 

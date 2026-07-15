@@ -17,9 +17,9 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
     )
     {
         if (context.TargetSymbol.GetAttributes().Any(attribute =>
-            {
-                return attribute.AttributeClass?.ToDisplayString() == TaggedUnionAttribute;
-            })
+        {
+            return attribute.AttributeClass?.ToDisplayString() == TaggedUnionAttribute;
+        })
         )
         {
             return null;
@@ -87,7 +87,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 .Where(static x => x is AnalysisResult.Success)
                 .Select(static (x, _) => ((AnalysisResult.Success)x).Model)
                 .WithTrackingName(nameof(UnionGenerationModel)),
-            static (sourceProductionContext, model) =>
+            action: static (sourceProductionContext, model) =>
             {
                 var hintName = $"{model.HintName}.g.cs";
                 var sourceText = GenerateSourceText(model);
@@ -110,7 +110,9 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(
             source: missingTaggedUnionAttributeDiagnosticProvider,
             action: static (sourceProductionContext, diagnostic) =>
-                sourceProductionContext.ReportDiagnostic(diagnostic)
+            {
+                sourceProductionContext.ReportDiagnostic(diagnostic);
+            }
         );
     }
     #endregion

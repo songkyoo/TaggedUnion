@@ -65,8 +65,11 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         AppendLine();
 
         // conversion operators
-        WriteConversionOperators();
-        AppendLine();
+        if (model.Cases.Any(x => x.SupportsConversionOperators))
+        {
+            WriteConversionOperators();
+            AppendLine();
+        }
 
         // fields
         WriteFields();

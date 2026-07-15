@@ -95,7 +95,7 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
                 .Where(static x => x is AnalysisResult.Success)
                 .Select(static (x, _) => ((AnalysisResult.Success)x!).Model)
                 .WithTrackingName(nameof(UnionGenerationModel)),
-            static (sourceProductionContext, model) =>
+            action: static (sourceProductionContext, model) =>
             {
                 var hintName = $"{model.HintName}.JsonSerializer.g.cs";
                 var sourceText = GenerateSourceText(model);

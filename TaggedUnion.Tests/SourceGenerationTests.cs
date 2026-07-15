@@ -37,7 +37,7 @@ public sealed class SourceGenerationTests
             {
             }
 
-            [TaggedUnion(typeof(Qux<int>), typeof(string))]
+            [TaggedUnion(typeof(Qux<int>), typeof(string), GenerateConversionOperators = true)]
             public readonly partial struct Foo
             {
             }
@@ -264,7 +264,7 @@ public sealed class SourceGenerationTests
                 public readonly int Value;
             }
 
-            [TaggedUnion(typeof(Qux), typeof(int))]
+            [TaggedUnion(typeof(Qux), typeof(int), GenerateConversionOperators = true)]
             public readonly partial struct Foo
             {
             }
@@ -500,7 +500,7 @@ public sealed class SourceGenerationTests
                 public readonly Baz Value;
             }
 
-            [TaggedUnion(typeof(Qux), typeof(Bar))]
+            [TaggedUnion(typeof(Qux), typeof(Bar), GenerateConversionOperators = true)]
             public readonly partial struct Foo
             {
             }
@@ -733,7 +733,7 @@ public sealed class SourceGenerationTests
                 public readonly string Value;
             }
 
-            [TaggedUnion(typeof(Qux), typeof(string), typeof(int), typeof(Bar), typeof(Quux), typeof(Baz))]
+            [TaggedUnion(typeof(Qux), typeof(string), typeof(int), typeof(Bar), typeof(Quux), typeof(Baz), GenerateConversionOperators = true)]
             public readonly partial struct Foo
             {
             }
@@ -1228,7 +1228,7 @@ public sealed class SourceGenerationTests
             {
             }
 
-            [TaggedUnion(typeof(IQux), typeof(string))]
+            [TaggedUnion(typeof(IQux), typeof(string), GenerateConversionOperators = true)]
             public readonly partial struct Foo
             {
             }
@@ -1249,6 +1249,33 @@ public sealed class SourceGenerationTests
             );
             Assert.That(generatedCode, Does.Contain("implicit operator Foo(string value)"));
             Assert.That(generatedCode, Does.Contain("explicit operator string(Foo value)"));
+        });
+    }
+
+    [Test]
+    public void ConversionOperatorsAreDisabledByDefault()
+    {
+        var (_, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(typeof(int), typeof(string))]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+        );
+        var generatedCode = generatedCodes.Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(generatedCode, Does.Not.Contain("#region Conversion Operators"));
+            Assert.That(generatedCode, Does.Not.Contain("implicit operator"));
+            Assert.That(generatedCode, Does.Not.Contain("explicit operator"));
+            Assert.That(generatedCode, Does.Contain("public Foo(int value)"));
+            Assert.That(generatedCode, Does.Contain("public Foo(string value)"));
         });
     }
 
