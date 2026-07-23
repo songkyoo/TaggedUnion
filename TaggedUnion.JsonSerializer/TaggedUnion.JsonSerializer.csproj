@@ -23,7 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TaggedUnion\TaggedUnion.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\TaggedUnion.JsonSerializer.Generator\TaggedUnion.JsonSerializer.Generator.csproj" PrivateAssets="all" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
