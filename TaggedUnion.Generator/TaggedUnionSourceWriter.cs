@@ -75,20 +75,20 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         WriteFields();
         AppendLine();
 
-        // constructors
-        WriteConstructors();
-        AppendLine();
-
         // properties
         WriteProperties();
         AppendLine();
 
-        // equatable interface
-        WriteEquatableInterface();
+        // constructors
+        WriteConstructors();
         AppendLine();
 
         // overrides
         WriteOverrides();
+        AppendLine();
+
+        // equatable interface
+        WriteEquatableInterface();
         AppendLine();
 
         // methods

@@ -100,6 +100,18 @@ public sealed class SourceGenerationTests
                     private readonly object? _reference;
                     #endregion
 
+                    #region Properties
+                    public bool HasValue => _tag != 0;
+
+                    public object? Value => _tag switch
+                    {
+                        0 => null,
+                        1 => _reference,
+                        2 => _reference,
+                        _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+                    };
+                    #endregion
+
                     #region Constructors
                     public Foo(global::Macaron.Union.Tests.Qux<int> value)
                     {
@@ -121,36 +133,6 @@ public sealed class SourceGenerationTests
 
                         _tag = 2;
                         _reference = value;
-                    }
-                    #endregion
-
-                    #region Properties
-                    public bool HasValue => _tag != 0;
-
-                    public object? Value => _tag switch
-                    {
-                        0 => null,
-                        1 => _reference,
-                        2 => _reference,
-                        _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
-                    };
-                    #endregion
-
-                    #region IEquatable<Foo> Interface
-                    public bool Equals(Foo other)
-                    {
-                        if (_tag != other._tag)
-                        {
-                            return false;
-                        }
-
-                        return _tag switch
-                        {
-                            0 => true,
-                            1 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Qux<int>>.Default.Equals((global::Macaron.Union.Tests.Qux<int>)_reference!, (global::Macaron.Union.Tests.Qux<int>)other._reference!),
-                            2 => global::System.Collections.Generic.EqualityComparer<string>.Default.Equals((string)_reference!, (string)other._reference!),
-                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
-                        };
                     }
                     #endregion
 
@@ -178,6 +160,24 @@ public sealed class SourceGenerationTests
                             0 => "<Uninitialized>",
                             1 => $"{_reference}",
                             2 => $"{_reference}",
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+                        };
+                    }
+                    #endregion
+
+                    #region IEquatable<Foo> Interface
+                    public bool Equals(Foo other)
+                    {
+                        if (_tag != other._tag)
+                        {
+                            return false;
+                        }
+
+                        return _tag switch
+                        {
+                            0 => true,
+                            1 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Qux<int>>.Default.Equals((global::Macaron.Union.Tests.Qux<int>)_reference!, (global::Macaron.Union.Tests.Qux<int>)other._reference!),
+                            2 => global::System.Collections.Generic.EqualityComparer<string>.Default.Equals((string)_reference!, (string)other._reference!),
                             _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
                         };
                     }
@@ -336,20 +336,6 @@ public sealed class SourceGenerationTests
                     private readonly Unmanaged _unmanaged;
                     #endregion
 
-                    #region Constructors
-                    public Foo(global::Macaron.Union.Tests.Qux value)
-                    {
-                        _tag = 1;
-                        _unmanaged.Value1 = value;
-                    }
-
-                    public Foo(int value)
-                    {
-                        _tag = 2;
-                        _unmanaged.Value2 = value;
-                    }
-                    #endregion
-
                     #region Properties
                     public bool HasValue => _tag != 0;
 
@@ -362,21 +348,17 @@ public sealed class SourceGenerationTests
                     };
                     #endregion
 
-                    #region IEquatable<Foo> Interface
-                    public bool Equals(Foo other)
+                    #region Constructors
+                    public Foo(global::Macaron.Union.Tests.Qux value)
                     {
-                        if (_tag != other._tag)
-                        {
-                            return false;
-                        }
+                        _tag = 1;
+                        _unmanaged.Value1 = value;
+                    }
 
-                        return _tag switch
-                        {
-                            0 => true,
-                            1 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Qux>.Default.Equals(_unmanaged.Value1, other._unmanaged.Value1),
-                            2 => global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(_unmanaged.Value2, other._unmanaged.Value2),
-                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
-                        };
+                    public Foo(int value)
+                    {
+                        _tag = 2;
+                        _unmanaged.Value2 = value;
                     }
                     #endregion
 
@@ -404,6 +386,24 @@ public sealed class SourceGenerationTests
                             0 => "<Uninitialized>",
                             1 => $"{_unmanaged.Value1}",
                             2 => $"{_unmanaged.Value2}",
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+                        };
+                    }
+                    #endregion
+
+                    #region IEquatable<Foo> Interface
+                    public bool Equals(Foo other)
+                    {
+                        if (_tag != other._tag)
+                        {
+                            return false;
+                        }
+
+                        return _tag switch
+                        {
+                            0 => true,
+                            1 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Qux>.Default.Equals(_unmanaged.Value1, other._unmanaged.Value1),
+                            2 => global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(_unmanaged.Value2, other._unmanaged.Value2),
                             _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
                         };
                     }
@@ -564,20 +564,6 @@ public sealed class SourceGenerationTests
                     private readonly global::Macaron.Union.Tests.Bar _value2;
                     #endregion
 
-                    #region Constructors
-                    public Foo(global::Macaron.Union.Tests.Qux value)
-                    {
-                        _tag = 1;
-                        _value1 = value;
-                    }
-
-                    public Foo(global::Macaron.Union.Tests.Bar value)
-                    {
-                        _tag = 2;
-                        _value2 = value;
-                    }
-                    #endregion
-
                     #region Properties
                     public bool HasValue => _tag != 0;
 
@@ -590,21 +576,17 @@ public sealed class SourceGenerationTests
                     };
                     #endregion
 
-                    #region IEquatable<Foo> Interface
-                    public bool Equals(Foo other)
+                    #region Constructors
+                    public Foo(global::Macaron.Union.Tests.Qux value)
                     {
-                        if (_tag != other._tag)
-                        {
-                            return false;
-                        }
+                        _tag = 1;
+                        _value1 = value;
+                    }
 
-                        return _tag switch
-                        {
-                            0 => true,
-                            1 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Qux>.Default.Equals(_value1, other._value1),
-                            2 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Bar>.Default.Equals(_value2, other._value2),
-                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
-                        };
+                    public Foo(global::Macaron.Union.Tests.Bar value)
+                    {
+                        _tag = 2;
+                        _value2 = value;
                     }
                     #endregion
 
@@ -632,6 +614,24 @@ public sealed class SourceGenerationTests
                             0 => "<Uninitialized>",
                             1 => $"{_value1}",
                             2 => $"{_value2}",
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+                        };
+                    }
+                    #endregion
+
+                    #region IEquatable<Foo> Interface
+                    public bool Equals(Foo other)
+                    {
+                        if (_tag != other._tag)
+                        {
+                            return false;
+                        }
+
+                        return _tag switch
+                        {
+                            0 => true,
+                            1 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Qux>.Default.Equals(_value1, other._value1),
+                            2 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Bar>.Default.Equals(_value2, other._value2),
                             _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
                         };
                     }
@@ -868,6 +868,22 @@ public sealed class SourceGenerationTests
                     private readonly global::Macaron.Union.Tests.Baz _value6;
                     #endregion
 
+                    #region Properties
+                    public bool HasValue => _tag != 0;
+
+                    public object? Value => _tag switch
+                    {
+                        0 => null,
+                        1 => _unmanaged.Value1,
+                        2 => _reference,
+                        3 => _unmanaged.Value3,
+                        4 => _value4,
+                        5 => _reference,
+                        6 => _value6,
+                        _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+                    };
+                    #endregion
+
                     #region Constructors
                     public Foo(global::Macaron.Union.Tests.Qux value)
                     {
@@ -916,44 +932,6 @@ public sealed class SourceGenerationTests
                     }
                     #endregion
 
-                    #region Properties
-                    public bool HasValue => _tag != 0;
-
-                    public object? Value => _tag switch
-                    {
-                        0 => null,
-                        1 => _unmanaged.Value1,
-                        2 => _reference,
-                        3 => _unmanaged.Value3,
-                        4 => _value4,
-                        5 => _reference,
-                        6 => _value6,
-                        _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
-                    };
-                    #endregion
-
-                    #region IEquatable<Foo> Interface
-                    public bool Equals(Foo other)
-                    {
-                        if (_tag != other._tag)
-                        {
-                            return false;
-                        }
-
-                        return _tag switch
-                        {
-                            0 => true,
-                            1 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Qux>.Default.Equals(_unmanaged.Value1, other._unmanaged.Value1),
-                            2 => global::System.Collections.Generic.EqualityComparer<string>.Default.Equals((string)_reference!, (string)other._reference!),
-                            3 => global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(_unmanaged.Value3, other._unmanaged.Value3),
-                            4 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Bar>.Default.Equals(_value4, other._value4),
-                            5 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Quux>.Default.Equals((global::Macaron.Union.Tests.Quux)_reference!, (global::Macaron.Union.Tests.Quux)other._reference!),
-                            6 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Baz>.Default.Equals(_value6, other._value6),
-                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
-                        };
-                    }
-                    #endregion
-
                     #region Overrides
                     public override bool Equals(object? obj)
                     {
@@ -986,6 +964,28 @@ public sealed class SourceGenerationTests
                             4 => $"{_value4}",
                             5 => $"{_reference}",
                             6 => $"{_value6}",
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+                        };
+                    }
+                    #endregion
+
+                    #region IEquatable<Foo> Interface
+                    public bool Equals(Foo other)
+                    {
+                        if (_tag != other._tag)
+                        {
+                            return false;
+                        }
+
+                        return _tag switch
+                        {
+                            0 => true,
+                            1 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Qux>.Default.Equals(_unmanaged.Value1, other._unmanaged.Value1),
+                            2 => global::System.Collections.Generic.EqualityComparer<string>.Default.Equals((string)_reference!, (string)other._reference!),
+                            3 => global::System.Collections.Generic.EqualityComparer<int>.Default.Equals(_unmanaged.Value3, other._unmanaged.Value3),
+                            4 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Bar>.Default.Equals(_value4, other._value4),
+                            5 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Quux>.Default.Equals((global::Macaron.Union.Tests.Quux)_reference!, (global::Macaron.Union.Tests.Quux)other._reference!),
+                            6 => global::System.Collections.Generic.EqualityComparer<global::Macaron.Union.Tests.Baz>.Default.Equals(_value6, other._value6),
                             _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
                         };
                     }
