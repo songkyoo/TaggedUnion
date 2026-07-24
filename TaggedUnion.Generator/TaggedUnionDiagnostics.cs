@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 
 namespace Macaron.Union;
 
@@ -102,4 +102,62 @@ internal static class TaggedUnionDiagnostics
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
+
+    public static Diagnostic CreateDiagnostic(UnionAnalysisError error)
+    {
+        return error switch
+        {
+            UnionAnalysisError.TargetTypeMustBeReadOnlyPartialStruct value => Diagnostic.Create(
+                descriptor: TargetTypeMustBeReadOnlyPartialStructRule,
+                location: value.Location,
+                messageArgs: [value.TargetTypeName]
+            ),
+            UnionAnalysisError.TargetTypeMustBeNonGeneric value => Diagnostic.Create(
+                descriptor: TargetTypeMustBeNonGenericRule,
+                location: value.Location,
+                messageArgs: [value.TargetTypeName]
+            ),
+            UnionAnalysisError.TargetTypeCannotDeclareInstanceConstructors value => Diagnostic.Create(
+                descriptor: TargetTypeCannotDeclareInstanceConstructorsRule,
+                location: value.Location,
+                messageArgs: [value.TargetTypeName]
+            ),
+            UnionAnalysisError.UnsupportedCaseType value => Diagnostic.Create(
+                descriptor: UnsupportedCaseTypeRule,
+                location: value.Location,
+                messageArgs: [value.CaseTypeName, value.TargetTypeName]
+            ),
+            UnionAnalysisError.DuplicateCaseType value => Diagnostic.Create(
+                descriptor: DuplicateCaseTypeRule,
+                location: value.Location,
+                messageArgs: [value.CaseTypeName, value.TargetTypeName]
+            ),
+            UnionAnalysisError.DuplicateCaseParameterName value => Diagnostic.Create(
+                descriptor: DuplicateCaseParameterNameRule,
+                location: value.Location,
+                messageArgs: [value.CaseTypeName, value.ParameterName, value.TargetTypeName]
+            ),
+            UnionAnalysisError.InvalidCaseParameterName value => Diagnostic.Create(
+                descriptor: InvalidCaseParameterNameRule,
+                location: value.Location,
+                messageArgs: [value.CaseTypeName, value.ParameterName, value.TargetTypeName]
+            ),
+            UnionAnalysisError.CaseAttributeTypeMustMatchCaseType value => Diagnostic.Create(
+                descriptor: CaseAttributeTypeMustMatchCaseTypeRule,
+                location: value.Location,
+                messageArgs: [value.CaseTypeName, value.TargetTypeName]
+            ),
+            UnionAnalysisError.InvalidCaseTag value => Diagnostic.Create(
+                descriptor: InvalidCaseTagRule,
+                location: value.Location,
+                messageArgs: [value.CaseTypeName, value.Tag, value.TargetTypeName]
+            ),
+            UnionAnalysisError.DuplicateCaseTag value => Diagnostic.Create(
+                descriptor: DuplicateCaseTagRule,
+                location: value.Location,
+                messageArgs: [value.CaseTypeName, value.Tag, value.TargetTypeName]
+            ),
+            _ => throw new ArgumentOutOfRangeException(nameof(error)),
+        };
+    }
 }

@@ -44,7 +44,7 @@ internal static class UnionGenerationModelFactory
     {
         if (!TryGetUnionCaseCandidates(taggedUnionAttribute, cancellationToken, out var caseCandidates))
         {
-            return new AnalysisResult.Failure(ImmutableArray<Diagnostic>.Empty);
+            return new AnalysisResult.Failure(ImmutableArray<UnionAnalysisError>.Empty);
         }
 
         var structDeclarationSyntax = (StructDeclarationSyntax)context.TargetNode;
@@ -55,7 +55,7 @@ internal static class UnionGenerationModelFactory
 
         if (targetTypeSymbol == null)
         {
-            return new AnalysisResult.Failure(ImmutableArray<Diagnostic>.Empty);
+            return new AnalysisResult.Failure(ImmutableArray<UnionAnalysisError>.Empty);
         }
 
         if (!TryGetCaseAttributeContexts(
@@ -67,27 +67,27 @@ internal static class UnionGenerationModelFactory
             out var caseAttributes
         ))
         {
-            return new AnalysisResult.Failure(ImmutableArray<Diagnostic>.Empty);
+            return new AnalysisResult.Failure(ImmutableArray<UnionAnalysisError>.Empty);
         }
 
-        var diagnosticsBuilder = ImmutableArray.CreateBuilder<Diagnostic>();
+        var errorsBuilder = ImmutableArray.CreateBuilder<UnionAnalysisError>();
         var isValid = true;
 
         isValid &= ValidateTargetTypeDeclaration(
             structDeclarationSyntax,
-            diagnosticsBuilder
+            errorsBuilder
         );
         isValid &= ValidateTargetTypeMembers(
             structDeclarationSyntax,
             targetTypeSymbol,
-            diagnosticsBuilder,
+            errorsBuilder,
             cancellationToken
         );
         isValid &= ValidateCaseAttributes(
             structDeclarationSyntax,
             caseCandidates,
             caseAttributes,
-            diagnosticsBuilder
+            errorsBuilder
         );
 
         caseCandidates = ApplyCaseAttributes(
@@ -98,17 +98,17 @@ internal static class UnionGenerationModelFactory
         isValid &= ValidateCaseTags(
             structDeclarationSyntax,
             caseCandidates,
-            diagnosticsBuilder
+            errorsBuilder
         );
         isValid &= ValidateCaseTypes(
             structDeclarationSyntax,
             caseCandidates,
-            diagnosticsBuilder
+            errorsBuilder
         );
 
         if (!isValid)
         {
-            return new AnalysisResult.Failure(diagnosticsBuilder.ToImmutable());
+            return new AnalysisResult.Failure(errorsBuilder.ToImmutable());
         }
 
         var generateConversionOperators = taggedUnionAttribute
@@ -460,17 +460,17 @@ internal static class UnionGenerationModelFactory
 
     private static bool ValidateTargetTypeDeclaration(
         StructDeclarationSyntax structDeclarationSyntax,
-        ImmutableArray<Diagnostic>.Builder diagnosticsBuilder
+        ImmutableArray<UnionAnalysisError>.Builder errorsBuilder
     )
     {
         var modifiers = structDeclarationSyntax.Modifiers;
+        var targetTypeName = structDeclarationSyntax.Identifier.ToString();
 
         if (!modifiers.Any(ReadOnlyKeyword) || !modifiers.Any(PartialKeyword))
         {
-            diagnosticsBuilder.Add(Diagnostic.Create(
-                descriptor: TaggedUnionDiagnostics.TargetTypeMustBeReadOnlyPartialStructRule,
-                location: structDeclarationSyntax.GetLocation(),
-                messageArgs: [structDeclarationSyntax.Identifier]
+            errorsBuilder.Add(new UnionAnalysisError.TargetTypeMustBeReadOnlyPartialStruct(
+                Location: structDeclarationSyntax.GetLocation(),
+                TargetTypeName: targetTypeName
             ));
 
             return false;
@@ -478,10 +478,9 @@ internal static class UnionGenerationModelFactory
 
         if (structDeclarationSyntax.TypeParameterList != null)
         {
-            diagnosticsBuilder.Add(Diagnostic.Create(
-                descriptor: TaggedUnionDiagnostics.TargetTypeMustBeNonGenericRule,
-                location: structDeclarationSyntax.GetLocation(),
-                messageArgs: [structDeclarationSyntax.Identifier]
+            errorsBuilder.Add(new UnionAnalysisError.TargetTypeMustBeNonGeneric(
+                Location: structDeclarationSyntax.GetLocation(),
+                TargetTypeName: targetTypeName
             ));
 
             return false;
@@ -493,7 +492,7 @@ internal static class UnionGenerationModelFactory
     private static bool ValidateTargetTypeMembers(
         StructDeclarationSyntax structDeclarationSyntax,
         INamedTypeSymbol typeSymbol,
-        ImmutableArray<Diagnostic>.Builder diagnosticsBuilder,
+        ImmutableArray<UnionAnalysisError>.Builder errorsBuilder,
         CancellationToken cancellationToken
     )
     {
@@ -508,10 +507,9 @@ internal static class UnionGenerationModelFactory
             {
                 var syntax = (ConstructorDeclarationSyntax)syntaxReference.GetSyntax(cancellationToken);
 
-                diagnosticsBuilder.Add(Diagnostic.Create(
-                    descriptor: TaggedUnionDiagnostics.TargetTypeCannotDeclareInstanceConstructorsRule,
-                    location: syntax.Identifier.GetLocation(),
-                    messageArgs: [structDeclarationSyntax.Identifier]
+                errorsBuilder.Add(new UnionAnalysisError.TargetTypeCannotDeclareInstanceConstructors(
+                    Location: syntax.Identifier.GetLocation(),
+                    TargetTypeName: structDeclarationSyntax.Identifier.ToString()
                 ));
             }
 
@@ -525,7 +523,7 @@ internal static class UnionGenerationModelFactory
         StructDeclarationSyntax structDeclarationSyntax,
         ImmutableArray<UnionCaseCandidateContext> candidates,
         ImmutableArray<TaggedUnionCaseAttributeContext> attributes,
-        ImmutableArray<Diagnostic>.Builder diagnosticsBuilder
+        ImmutableArray<UnionAnalysisError>.Builder errorsBuilder
     )
     {
         var knownTypes = candidates
@@ -537,14 +535,10 @@ internal static class UnionGenerationModelFactory
 
         foreach (var context in unmatchedAttributeContexts)
         {
-            diagnosticsBuilder.Add(Diagnostic.Create(
-                descriptor: TaggedUnionDiagnostics.CaseAttributeTypeMustMatchCaseTypeRule,
-                location: context.TypeLocation,
-                messageArgs:
-                [
-                    context.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
-                    structDeclarationSyntax.Identifier,
-                ]
+            errorsBuilder.Add(new UnionAnalysisError.CaseAttributeTypeMustMatchCaseType(
+                Location: context.TypeLocation,
+                CaseTypeName: context.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                TargetTypeName: structDeclarationSyntax.Identifier.ToString()
             ));
         }
 
@@ -554,7 +548,7 @@ internal static class UnionGenerationModelFactory
     private static bool ValidateCaseTypes(
         StructDeclarationSyntax structDeclarationSyntax,
         ImmutableArray<UnionCaseCandidateContext> candidates,
-        ImmutableArray<Diagnostic>.Builder diagnosticsBuilder
+        ImmutableArray<UnionAnalysisError>.Builder errorsBuilder
     )
     {
         var unsupportedCaseTypes = new List<UnionCaseCandidateContext>();
@@ -584,7 +578,7 @@ internal static class UnionGenerationModelFactory
             }
             else if (knownParameterNames.TryGetValue(candidate.ParamName, out var existingCandidate))
             {
-                duplicateCaseParameterNames.Add(GetDuplicateCaseParameterNameDiagnosticCandidate(
+                duplicateCaseParameterNames.Add(GetDuplicateCaseParameterNameErrorCandidate(
                     existingCandidate,
                     candidate
                 ));
@@ -597,55 +591,39 @@ internal static class UnionGenerationModelFactory
 
         foreach (var candidate in unsupportedCaseTypes)
         {
-            diagnosticsBuilder.Add(Diagnostic.Create(
-                descriptor: TaggedUnionDiagnostics.UnsupportedCaseTypeRule,
-                location: candidate.ArgumentSyntax.GetLocation(),
-                messageArgs:
-                [
-                    candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
-                    structDeclarationSyntax.Identifier,
-                ]
+            errorsBuilder.Add(new UnionAnalysisError.UnsupportedCaseType(
+                Location: candidate.ArgumentSyntax.GetLocation(),
+                CaseTypeName: candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                TargetTypeName: structDeclarationSyntax.Identifier.ToString()
             ));
         }
 
         foreach (var candidate in duplicateCaseTypes)
         {
-            diagnosticsBuilder.Add(Diagnostic.Create(
-                descriptor: TaggedUnionDiagnostics.DuplicateCaseTypeRule,
-                location: candidate.ArgumentSyntax.GetLocation(),
-                messageArgs:
-                [
-                    candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
-                    structDeclarationSyntax.Identifier,
-                ]
+            errorsBuilder.Add(new UnionAnalysisError.DuplicateCaseType(
+                Location: candidate.ArgumentSyntax.GetLocation(),
+                CaseTypeName: candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                TargetTypeName: structDeclarationSyntax.Identifier.ToString()
             ));
         }
 
         foreach (var candidate in invalidCaseParameterNames)
         {
-            diagnosticsBuilder.Add(Diagnostic.Create(
-                descriptor: TaggedUnionDiagnostics.InvalidCaseParameterNameRule,
-                location: candidate.ParamNameLocation,
-                messageArgs:
-                [
-                    candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
-                    candidate.ParamName,
-                    structDeclarationSyntax.Identifier,
-                ]
+            errorsBuilder.Add(new UnionAnalysisError.InvalidCaseParameterName(
+                Location: candidate.ParamNameLocation,
+                CaseTypeName: candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                ParameterName: candidate.ParamName,
+                TargetTypeName: structDeclarationSyntax.Identifier.ToString()
             ));
         }
 
         foreach (var candidate in duplicateCaseParameterNames)
         {
-            diagnosticsBuilder.Add(Diagnostic.Create(
-                descriptor: TaggedUnionDiagnostics.DuplicateCaseParameterNameRule,
-                location: candidate.ParamNameLocation,
-                messageArgs:
-                [
-                    candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
-                    candidate.ParamName,
-                    structDeclarationSyntax.Identifier,
-                ]
+            errorsBuilder.Add(new UnionAnalysisError.DuplicateCaseParameterName(
+                Location: candidate.ParamNameLocation,
+                CaseTypeName: candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                ParameterName: candidate.ParamName,
+                TargetTypeName: structDeclarationSyntax.Identifier.ToString()
             ));
         }
 
@@ -670,7 +648,7 @@ internal static class UnionGenerationModelFactory
             };
         }
 
-        static UnionCaseCandidateContext GetDuplicateCaseParameterNameDiagnosticCandidate(
+        static UnionCaseCandidateContext GetDuplicateCaseParameterNameErrorCandidate(
             UnionCaseCandidateContext existingCandidate,
             UnionCaseCandidateContext candidate
         )
@@ -685,7 +663,7 @@ internal static class UnionGenerationModelFactory
     private static bool ValidateCaseTags(
         StructDeclarationSyntax structDeclarationSyntax,
         ImmutableArray<UnionCaseCandidateContext> candidates,
-        ImmutableArray<Diagnostic>.Builder diagnosticsBuilder
+        ImmutableArray<UnionAnalysisError>.Builder errorsBuilder
     )
     {
         var invalidCaseTags = new List<UnionCaseCandidateContext>();
@@ -703,7 +681,7 @@ internal static class UnionGenerationModelFactory
 
             if (knownTags.TryGetValue(candidate.Tag, out var existingCandidate))
             {
-                duplicateCaseTags.Add(GetDuplicateCaseTagDiagnosticCandidate(
+                duplicateCaseTags.Add(GetDuplicateCaseTagErrorCandidate(
                     existingCandidate,
                     candidate
                 ));
@@ -716,36 +694,28 @@ internal static class UnionGenerationModelFactory
 
         foreach (var candidate in invalidCaseTags)
         {
-            diagnosticsBuilder.Add(Diagnostic.Create(
-                descriptor: TaggedUnionDiagnostics.InvalidCaseTagRule,
-                location: candidate.TagLocation,
-                messageArgs:
-                [
-                    candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
-                    candidate.Tag,
-                    structDeclarationSyntax.Identifier,
-                ]
+            errorsBuilder.Add(new UnionAnalysisError.InvalidCaseTag(
+                Location: candidate.TagLocation,
+                CaseTypeName: candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                Tag: candidate.Tag,
+                TargetTypeName: structDeclarationSyntax.Identifier.ToString()
             ));
         }
 
         foreach (var candidate in duplicateCaseTags)
         {
-            diagnosticsBuilder.Add(Diagnostic.Create(
-                descriptor: TaggedUnionDiagnostics.DuplicateCaseTagRule,
-                location: candidate.TagLocation,
-                messageArgs:
-                [
-                    candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
-                    candidate.Tag,
-                    structDeclarationSyntax.Identifier,
-                ]
+            errorsBuilder.Add(new UnionAnalysisError.DuplicateCaseTag(
+                Location: candidate.TagLocation,
+                CaseTypeName: candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                Tag: candidate.Tag,
+                TargetTypeName: structDeclarationSyntax.Identifier.ToString()
             ));
         }
 
         return invalidCaseTags.Count == 0 && duplicateCaseTags.Count == 0;
 
         #region Local Functions
-        static UnionCaseCandidateContext GetDuplicateCaseTagDiagnosticCandidate(
+        static UnionCaseCandidateContext GetDuplicateCaseTagErrorCandidate(
             UnionCaseCandidateContext existingCandidate,
             UnionCaseCandidateContext candidate
         )

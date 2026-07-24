@@ -14,8 +14,17 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
     private const string TaggedUnionJsonSerializerAttributeMetadataName = "Macaron.Union.TaggedUnionJsonSerializerAttribute";
     #endregion
 
+    #region Types
+    private abstract record JsonSerializerAnalysisResult
+    {
+        public sealed record Success(UnionGenerationModel Model) : JsonSerializerAnalysisResult;
+
+        public sealed record Failure(Diagnostic Diagnostic) : JsonSerializerAnalysisResult;
+    }
+    #endregion
+
     #region Static Methods
-    private static AnalysisResult? CreateAnalysisResult(
+    private static JsonSerializerAnalysisResult? CreateAnalysisResult(
         GeneratorAttributeSyntaxContext context,
         CancellationToken cancellationToken
     )
@@ -33,7 +42,9 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
                 cancellationToken
             );
 
-            return result is AnalysisResult.Success ? result : null;
+            return result is AnalysisResult.Success success
+                ? new JsonSerializerAnalysisResult.Success(success.Model)
+                : null;
         }
 
         var structDeclarationSyntax = (StructDeclarationSyntax)context.TargetNode;
@@ -44,7 +55,7 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
             messageArgs: [structDeclarationSyntax.Identifier]
         );
 
-        return new AnalysisResult.Failure(diagnostic);
+        return new JsonSerializerAnalysisResult.Failure(diagnostic);
 
         #region Local Functions
         static Location GetLocation(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
@@ -80,20 +91,17 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
 
         context.RegisterSourceOutput(
             source: analysisResultProvider
-                .Where(static x => x is AnalysisResult.Failure)
-                .Select(static (x, _) => ((AnalysisResult.Failure)x!).Diagnostics),
-            action: static (sourceProductionContext, diagnostics) =>
+                .Where(static x => x is JsonSerializerAnalysisResult.Failure)
+                .Select(static (x, _) => ((JsonSerializerAnalysisResult.Failure)x!).Diagnostic),
+            action: static (sourceProductionContext, diagnostic) =>
             {
-                foreach (var diagnostic in diagnostics)
-                {
-                    sourceProductionContext.ReportDiagnostic(diagnostic);
-                }
+                sourceProductionContext.ReportDiagnostic(diagnostic);
             }
         );
         context.RegisterSourceOutput(
             source: analysisResultProvider
-                .Where(static x => x is AnalysisResult.Success)
-                .Select(static (x, _) => ((AnalysisResult.Success)x!).Model)
+                .Where(static x => x is JsonSerializerAnalysisResult.Success)
+                .Select(static (x, _) => ((JsonSerializerAnalysisResult.Success)x!).Model)
                 .WithTrackingName(nameof(UnionGenerationModel)),
             action: static (sourceProductionContext, model) =>
             {

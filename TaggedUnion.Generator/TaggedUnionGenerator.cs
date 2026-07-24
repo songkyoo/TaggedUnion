@@ -73,12 +73,14 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(
             source: analysisResultProvider
                 .Where(x => x is AnalysisResult.Failure)
-                .Select((x, _) => ((AnalysisResult.Failure)x).Diagnostics),
-            action: static (sourceProductionContext, diagnostics) =>
+                .Select((x, _) => ((AnalysisResult.Failure)x).Errors),
+            action: static (sourceProductionContext, errors) =>
             {
-                foreach (var diagnostic in diagnostics)
+                foreach (var error in errors)
                 {
-                    sourceProductionContext.ReportDiagnostic(diagnostic);
+                    sourceProductionContext.ReportDiagnostic(
+                        TaggedUnionDiagnostics.CreateDiagnostic(error)
+                    );
                 }
             }
         );
