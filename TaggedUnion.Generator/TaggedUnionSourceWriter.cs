@@ -1,6 +1,7 @@
 using System.Text;
 
 using static Macaron.Union.UnionCaseGenerationModelHelper;
+using static Macaron.Union.UnionCaseStorageHelper;
 using static Macaron.Union.UnionCaseStorageKind;
 
 namespace Macaron.Union;
@@ -14,6 +15,10 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
     #region Fields
 
     private readonly StringBuilder _builder = new();
+    private readonly UnionCaseSourceGenerationModel[] _caseModels = model
+        .Cases
+        .Select(CreateSourceGenerationModel)
+        .ToArray();
     private string _leadingWhitespace = "";
     #endregion
 
@@ -52,7 +57,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         IncreaseIndent();
 
         // types
-        if (model.Cases.Any(context => context.StorageKind == Unmanaged))
+        if (_caseModels.Any(context => context.StorageKind == Unmanaged))
         {
             AppendLine("#region Types");
             WriteUnmanagedTypeDeclaration();
@@ -65,7 +70,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         AppendLine();
 
         // conversion operators
-        if (model.Cases.Any(x => x.SupportsConversionOperators))
+        if (_caseModels.Any(x => x.SupportsConversionOperators))
         {
             WriteConversionOperators();
             AppendLine();
@@ -124,7 +129,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         AppendLine("private struct Unmanaged");
         AppendLine("{");
 
-        foreach (var context1 in model.Cases)
+        foreach (var context1 in _caseModels)
         {
             if (context1.StorageKind != Unmanaged)
             {
@@ -170,8 +175,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
     private void WriteConversionOperators()
     {
         var typeName = model.TypeName;
-        var caseContexts = model
-            .Cases
+        var caseContexts = _caseModels
             .Where(x => x.SupportsConversionOperators)
             .ToArray();
 
@@ -213,7 +217,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
 
     private void WriteFields()
     {
-        var caseContexts = model.Cases;
+        var caseContexts = _caseModels;
 
         AppendLine("#region Fields");
         AppendLine("private readonly byte _tag;");
@@ -239,7 +243,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
     private void WriteConstructors()
     {
         var typeName = model.TypeName;
-        var caseContexts = model.Cases;
+        var caseContexts = _caseModels;
 
         AppendLine("#region Constructors");
 
@@ -284,7 +288,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         AppendLine("{");
         AppendLine($"{Indent}0 => null,");
 
-        foreach (var caseContext in model.Cases)
+        foreach (var caseContext in _caseModels)
         {
             AppendLine($"{Indent}{caseContext.Tag} => {GetValueAccessorString(caseContext)},");
         }
@@ -293,7 +297,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         AppendLine("};");
         AppendLine();
 
-        foreach (var caseContext in model.Cases)
+        foreach (var caseContext in _caseModels)
         {
             var caseTypeName = caseContext.FullyQualifiedTypeName;
             var castString = caseContext.StorageKind == Reference ? $"({caseTypeName})" : "";
@@ -322,7 +326,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}0 => true,");
 
-        foreach (var caseContext in model.Cases)
+        foreach (var caseContext in _caseModels)
         {
             AppendLine(GetComparisonExpression(caseContext));
         }
@@ -333,7 +337,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         AppendLine("#endregion");
 
         #region Local Functions
-        static string GetComparisonExpression(UnionCaseGenerationModel model)
+        static string GetComparisonExpression(UnionCaseSourceGenerationModel model)
         {
             var tag = model.Tag;
             var caseTypeName = model.FullyQualifiedTypeName;
@@ -366,7 +370,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}0 => 0,");
 
-        foreach (var caseContext in model.Cases)
+        foreach (var caseContext in _caseModels)
         {
             AppendLine($"{Indent}{Indent}{caseContext.Tag} => global::System.HashCode.Combine(_tag, {GetValueAccessorString(caseContext)}),");
         }
@@ -383,7 +387,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}0 => \"<Uninitialized>\",");
 
-        foreach (var caseContext in model.Cases)
+        foreach (var caseContext in _caseModels)
         {
             AppendLine($"{Indent}{Indent}{caseContext.Tag} => $\"{{{GetValueAccessorString(caseContext)}}}\",");
         }
@@ -400,7 +404,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         AppendLine("#region Methods");
 
         // TryGet
-        foreach (var caseContext in model.Cases)
+        foreach (var caseContext in _caseModels)
         {
             var tag = caseContext.Tag;
             var caseTypeName = caseContext.FullyQualifiedTypeName;
@@ -433,10 +437,10 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         // Switch
         AppendLine("public void Switch(");
 
-        for (var i = 0; i < model.Cases.Length; i++)
+        for (var i = 0; i < _caseModels.Length; i++)
         {
-            var caseContext = model.Cases[i];
-            var separator = i < model.Cases.Length - 1 ? "," : "";
+            var caseContext = _caseModels[i];
+            var separator = i < _caseModels.Length - 1 ? "," : "";
 
             AppendLine($"{Indent}global::System.Action<{caseContext.FullyQualifiedTypeName}> {caseContext.ParamName}{separator}");
         }
@@ -447,7 +451,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}case 0: throw new global::System.InvalidOperationException(\"Value not initialized.\");");
 
-        foreach (var caseContext in model.Cases)
+        foreach (var caseContext in _caseModels)
         {
             var tag = caseContext.Tag;
             var caseTypeName = caseContext.FullyQualifiedTypeName;
@@ -466,10 +470,10 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         // Match
         AppendLine("public TResult Match<TResult>(");
 
-        for (var i = 0; i < model.Cases.Length; i++)
+        for (var i = 0; i < _caseModels.Length; i++)
         {
-            var caseContext = model.Cases[i];
-            var separator = i < model.Cases.Length - 1 ? "," : "";
+            var caseContext = _caseModels[i];
+            var separator = i < _caseModels.Length - 1 ? "," : "";
 
             AppendLine($"{Indent}global::System.Func<{caseContext.FullyQualifiedTypeName}, TResult> {caseContext.ParamName}{separator}");
         }
@@ -480,7 +484,7 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}0 => throw new global::System.InvalidOperationException(\"Value not initialized.\"),");
 
-        foreach (var caseContext in model.Cases)
+        foreach (var caseContext in _caseModels)
         {
             var caseTypeName = caseContext.FullyQualifiedTypeName;
             var paramName = caseContext.ParamName;

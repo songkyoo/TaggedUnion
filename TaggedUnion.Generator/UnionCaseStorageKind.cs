@@ -1,4 +1,4 @@
-﻿namespace Macaron.Union;
+namespace Macaron.Union;
 
 internal enum UnionCaseStorageKind
 {

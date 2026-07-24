@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using static Macaron.Union.HintNameHelper;
 using static Macaron.Union.StringHelper;
 using static Macaron.Union.TypeDeclarationHelper;
-using static Macaron.Union.UnionCaseStorageKind;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxKind;
 using static Microsoft.CodeAnalysis.SpecialType;
 using static Microsoft.CodeAnalysis.SymbolDisplayFormat;
@@ -124,8 +123,8 @@ internal static class UnionGenerationModelFactory
         {
             var caseTypeSymbol = caseCandidate.TypeSymbol;
             var caseModel = new UnionCaseGenerationModel(
-                StorageKind: GetCaseStorageKind(caseTypeSymbol),
                 IsReferenceType: caseTypeSymbol.IsReferenceType,
+                IsUnmanagedType: caseTypeSymbol.IsUnmanagedType,
                 SupportsConversionOperators: generateConversionOperators && caseTypeSymbol.TypeKind != Interface,
                 FullyQualifiedTypeName: GetCaseTypeName(caseTypeSymbol),
                 ParamName: caseCandidate.ParamName,
@@ -211,16 +210,6 @@ internal static class UnionGenerationModelFactory
             return builder.ToImmutable();
         }
 
-        static UnionCaseStorageKind GetCaseStorageKind(ITypeSymbol typeSymbol)
-        {
-            return typeSymbol switch
-            {
-                { IsReferenceType: true } => Reference,
-                { IsUnmanagedType: true } => Unmanaged,
-                { IsValueType: true } => Managed,
-                _ => throw new InvalidOperationException($"Cannot determine the storage kind for type '{typeSymbol.ToDisplayString()}'."),
-            };
-        }
         #endregion
     }
 
