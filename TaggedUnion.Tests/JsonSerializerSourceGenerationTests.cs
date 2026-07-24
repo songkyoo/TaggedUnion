@@ -39,6 +39,7 @@ public sealed class JsonSerializerSourceGenerationTests
             "return default;",
             "1 => new Foo(global::System.Text.Json.JsonSerializer.Deserialize<int>(ref reader, options))",
             "42 => new Foo(global::System.Text.Json.JsonSerializer.Deserialize<string>(ref reader, options)",
+            "?? throw new global::System.Text.Json.JsonException(\"The value for tag 42 cannot be null.\")",
             "if (value._tag == 0)",
             "writer.WriteNullValue();",
             "writer.WriteStartArray();",

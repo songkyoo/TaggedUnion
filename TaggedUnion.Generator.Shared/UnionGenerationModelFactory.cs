@@ -125,6 +125,7 @@ internal static class UnionGenerationModelFactory
             var caseTypeSymbol = caseCandidate.TypeSymbol;
             var caseModel = new UnionCaseGenerationModel(
                 StorageKind: GetCaseStorageKind(caseTypeSymbol),
+                IsReferenceType: caseTypeSymbol.IsReferenceType,
                 SupportsConversionOperators: generateConversionOperators && caseTypeSymbol.TypeKind != Interface,
                 FullyQualifiedTypeName: GetCaseTypeName(caseTypeSymbol),
                 ParamName: caseCandidate.ParamName,

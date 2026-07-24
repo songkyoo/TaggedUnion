@@ -1,7 +1,6 @@
 using System.Text;
 
 using static Macaron.Union.UnionCaseGenerationModelHelper;
-using static Macaron.Union.UnionCaseStorageKind;
 
 namespace Macaron.Union;
 
@@ -161,7 +160,7 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter(UnionGenerationModel
         {
             var expression = $"global::System.Text.Json.JsonSerializer.Deserialize<{model.FullyQualifiedTypeName}>(ref reader, options)";
 
-            return model.StorageKind == Reference
+            return model.IsReferenceType
                 ? $"{expression} ?? throw new global::System.Text.Json.JsonException(\"The value for tag {model.Tag} cannot be null.\")"
                 : expression;
         }
