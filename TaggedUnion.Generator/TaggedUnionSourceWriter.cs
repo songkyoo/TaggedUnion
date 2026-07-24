@@ -291,6 +291,18 @@ internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
 
         AppendLine($"{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{_tag}}\"),");
         AppendLine("};");
+        AppendLine();
+
+        foreach (var caseContext in model.Cases)
+        {
+            var caseTypeName = caseContext.FullyQualifiedTypeName;
+            var castString = caseContext.StorageKind == Reference ? $"({caseTypeName})" : "";
+            var nullForgivingAnnotation = caseContext.StorageKind == Reference ? "!" : "";
+            var propertyName = GetValuePropertyName(caseContext.Tag);
+
+            AppendLine($"private {caseTypeName} {propertyName} => {castString}{GetValueAccessorString(caseContext)}{nullForgivingAnnotation};");
+        }
+
         AppendLine("#endregion");
     }
 

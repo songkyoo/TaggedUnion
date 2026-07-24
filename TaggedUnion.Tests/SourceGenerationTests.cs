@@ -110,6 +110,9 @@ public sealed class SourceGenerationTests
                         2 => _reference,
                         _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
                     };
+
+                    private global::Macaron.Union.Tests.Qux<int> __1 => (global::Macaron.Union.Tests.Qux<int>)_reference!;
+                    private string __2 => (string)_reference!;
                     #endregion
 
                     #region Constructors
@@ -346,6 +349,9 @@ public sealed class SourceGenerationTests
                         2 => _unmanaged.Value2,
                         _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
                     };
+
+                    private global::Macaron.Union.Tests.Qux __1 => _unmanaged.Value1;
+                    private int __2 => _unmanaged.Value2;
                     #endregion
 
                     #region Constructors
@@ -574,6 +580,9 @@ public sealed class SourceGenerationTests
                         2 => _value2,
                         _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
                     };
+
+                    private global::Macaron.Union.Tests.Qux __1 => _value1;
+                    private global::Macaron.Union.Tests.Bar __2 => _value2;
                     #endregion
 
                     #region Constructors
@@ -882,6 +891,13 @@ public sealed class SourceGenerationTests
                         6 => _value6,
                         _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
                     };
+
+                    private global::Macaron.Union.Tests.Qux __1 => _unmanaged.Value1;
+                    private string __2 => (string)_reference!;
+                    private int __3 => _unmanaged.Value3;
+                    private global::Macaron.Union.Tests.Bar __4 => _value4;
+                    private global::Macaron.Union.Tests.Quux __5 => (global::Macaron.Union.Tests.Quux)_reference!;
+                    private global::Macaron.Union.Tests.Baz __6 => _value6;
                     #endregion
 
                     #region Constructors
@@ -1156,6 +1172,7 @@ public sealed class SourceGenerationTests
             expectedFragments:
             [
                 "public int Value42;",
+                "private int __42 => _unmanaged.Value42;",
                 "_tag = 42;",
                 "if (_tag != 42)",
                 "case 42: @int(",
