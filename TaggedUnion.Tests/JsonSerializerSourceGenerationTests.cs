@@ -8,7 +8,7 @@ namespace Macaron.Union.Tests;
 public sealed class JsonSerializerSourceGenerationTests
 {
     [Test]
-    public void GeneratesArrayConverterUsingUnionStorage()
+    public void GeneratesArrayConverterUsingInternalValueProperties()
     {
         var (_, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionJsonSerializerGenerator>(
             sourceCode:
@@ -43,8 +43,8 @@ public sealed class JsonSerializerSourceGenerationTests
             "writer.WriteNullValue();",
             "writer.WriteStartArray();",
             "writer.WriteNumberValue(value._tag);",
-            "global::System.Text.Json.JsonSerializer.Serialize<int>(writer, value._unmanaged.Value1, options);",
-            "global::System.Text.Json.JsonSerializer.Serialize<string>(writer, (string)value._reference!, options);",
+            "global::System.Text.Json.JsonSerializer.Serialize<int>(writer, value.__1, options);",
+            "global::System.Text.Json.JsonSerializer.Serialize<string>(writer, value.__42, options);",
         };
 
         foreach (var expectedFragment in expectedFragments)
@@ -54,5 +54,9 @@ public sealed class JsonSerializerSourceGenerationTests
                 expression: Does.Contain(expectedFragment.ReplaceLineEndings())
             );
         }
+
+        Assert.That(generatedCode, Does.Not.Contain("value._reference"));
+        Assert.That(generatedCode, Does.Not.Contain("value._unmanaged"));
+        Assert.That(generatedCode, Does.Not.Contain("value._value"));
     }
 }

@@ -193,7 +193,9 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter(UnionGenerationModel
 
         foreach (var caseContext in model.Cases)
         {
-            AppendLine($"{Indent}{Indent}case {caseContext.Tag}: global::System.Text.Json.JsonSerializer.Serialize<{caseContext.FullyQualifiedTypeName}>(writer, {GetSerializeValueExpression(caseContext)}, options); break;");
+            var valuePropertyName = GetValuePropertyName(caseContext.Tag);
+
+            AppendLine($"{Indent}{Indent}case {caseContext.Tag}: global::System.Text.Json.JsonSerializer.Serialize<{caseContext.FullyQualifiedTypeName}>(writer, value.{valuePropertyName}, options); break;");
         }
 
         AppendLine($"{Indent}{Indent}default: throw new global::System.Text.Json.JsonException($\"Invalid tag: {{value._tag}}\");");
@@ -202,17 +204,6 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter(UnionGenerationModel
         AppendLine();
         AppendLine($"{Indent}writer.WriteEndArray();");
         AppendLine("}");
-
-        #region Local Functions
-        static string GetSerializeValueExpression(UnionCaseGenerationModel model)
-        {
-            var accessor = $"value.{GetValueAccessorString(model)}";
-
-            return model.StorageKind == Reference
-                ? $"({model.FullyQualifiedTypeName}){accessor}!"
-                : accessor;
-        }
-        #endregion
     }
 
     private void AppendLine(string text = "")
