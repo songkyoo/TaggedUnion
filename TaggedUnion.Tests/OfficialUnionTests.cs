@@ -10,6 +10,21 @@ namespace Macaron.Union.Tests;
 public sealed class OfficialUnionTests
 {
     [Test]
+    public void RuntimeTaggedUnionSupportsUnionPatterns()
+    {
+        IRuntimeValue value = new RuntimeValue();
+        TaggedUnion<IRuntimeValue, int> union = value;
+
+        var result = union switch
+        {
+            IRuntimeValue => "value",
+            int => "int",
+        };
+
+        Assert.That(result, Is.EqualTo("value"));
+    }
+
+    [Test]
     public void InterfaceCaseImplicitlyConvertsToTaggedUnion()
     {
         var (compilation, driver) = CreateCompilationAndDriver(
@@ -105,6 +120,14 @@ public sealed class OfficialUnionTests
             result!.GetType().FullName,
             Is.EqualTo("Macaron.Union.Tests.OfficialUnion.Generated.Value")
         );
+    }
+
+    private interface IRuntimeValue
+    {
+    }
+
+    private sealed class RuntimeValue : IRuntimeValue
+    {
     }
 }
 #endif

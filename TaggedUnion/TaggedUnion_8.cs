@@ -1,0 +1,606 @@
+namespace Macaron.Union;
+
+#if NET11_0_OR_GREATER
+[global::System.Runtime.CompilerServices.Union]
+public readonly struct TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> :
+    global::System.IEquatable<TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>>,
+    ITaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>,
+    TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>.IUnionMembers
+#else
+public readonly struct TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> :
+    global::System.IEquatable<TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>>,
+    ITaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>
+#endif
+    where T1 : notnull
+    where T2 : notnull
+    where T3 : notnull
+    where T4 : notnull
+    where T5 : notnull
+    where T6 : notnull
+    where T7 : notnull
+    where T8 : notnull
+{
+#if NET11_0_OR_GREATER
+    #region Types
+    public interface IUnionMembers
+    {
+        static TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> Create(T1 value) => new(value);
+
+        static TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> Create(T2 value) => new(value);
+
+        static TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> Create(T3 value) => new(value);
+
+        static TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> Create(T4 value) => new(value);
+
+        static TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> Create(T5 value) => new(value);
+
+        static TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> Create(T6 value) => new(value);
+
+        static TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> Create(T7 value) => new(value);
+
+        static TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> Create(T8 value) => new(value);
+
+        object? Value { get; }
+    }
+    #endregion
+#endif
+
+    #region Operator Overloads
+    public static bool operator ==(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> left, TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> left, TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> right)
+    {
+        return !left.Equals(right);
+    }
+    #endregion
+
+    #region Conversion Operators
+    public static implicit operator TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(T1 value)
+    {
+        return new TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(value);
+    }
+
+    public static explicit operator T1(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> value)
+    {
+        if (value.TryGetValue(out T1? result))
+        {
+            return result;
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>)}' to type '{typeof(T1)}'."
+        );
+    }
+
+    public static implicit operator TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(T2 value)
+    {
+        return new TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(value);
+    }
+
+    public static explicit operator T2(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> value)
+    {
+        if (value.TryGetValue(out T2? result))
+        {
+            return result;
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>)}' to type '{typeof(T2)}'."
+        );
+    }
+
+    public static implicit operator TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(T3 value)
+    {
+        return new TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(value);
+    }
+
+    public static explicit operator T3(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> value)
+    {
+        if (value.TryGetValue(out T3? result))
+        {
+            return result;
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>)}' to type '{typeof(T3)}'."
+        );
+    }
+
+    public static implicit operator TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(T4 value)
+    {
+        return new TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(value);
+    }
+
+    public static explicit operator T4(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> value)
+    {
+        if (value.TryGetValue(out T4? result))
+        {
+            return result;
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>)}' to type '{typeof(T4)}'."
+        );
+    }
+
+    public static implicit operator TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(T5 value)
+    {
+        return new TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(value);
+    }
+
+    public static explicit operator T5(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> value)
+    {
+        if (value.TryGetValue(out T5? result))
+        {
+            return result;
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>)}' to type '{typeof(T5)}'."
+        );
+    }
+
+    public static implicit operator TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(T6 value)
+    {
+        return new TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(value);
+    }
+
+    public static explicit operator T6(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> value)
+    {
+        if (value.TryGetValue(out T6? result))
+        {
+            return result;
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>)}' to type '{typeof(T6)}'."
+        );
+    }
+
+    public static implicit operator TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(T7 value)
+    {
+        return new TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(value);
+    }
+
+    public static explicit operator T7(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> value)
+    {
+        if (value.TryGetValue(out T7? result))
+        {
+            return result;
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>)}' to type '{typeof(T7)}'."
+        );
+    }
+
+    public static implicit operator TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(T8 value)
+    {
+        return new TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>(value);
+    }
+
+    public static explicit operator T8(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> value)
+    {
+        if (value.TryGetValue(out T8? result))
+        {
+            return result;
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>)}' to type '{typeof(T8)}'."
+        );
+    }
+    #endregion
+
+    #region Fields
+    private readonly byte _tag;
+    private readonly T1? _value1;
+    private readonly T2? _value2;
+    private readonly T3? _value3;
+    private readonly T4? _value4;
+    private readonly T5? _value5;
+    private readonly T6? _value6;
+    private readonly T7? _value7;
+    private readonly T8? _value8;
+    #endregion
+
+    #region Properties
+    public bool HasValue => _tag != 0;
+
+    public object? Value => _tag switch
+    {
+        0 => null,
+        1 => _value1,
+        2 => _value2,
+        3 => _value3,
+        4 => _value4,
+        5 => _value5,
+        6 => _value6,
+        7 => _value7,
+        8 => _value8,
+        _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+    };
+    #endregion
+
+    #region Constructors
+    public TaggedUnion(T1 value)
+    {
+        if (value is null)
+        {
+            throw new global::System.ArgumentNullException(nameof(value));
+        }
+
+        _tag = 1;
+        _value1 = value;
+    }
+
+    public TaggedUnion(T2 value)
+    {
+        if (value is null)
+        {
+            throw new global::System.ArgumentNullException(nameof(value));
+        }
+
+        _tag = 2;
+        _value2 = value;
+    }
+
+    public TaggedUnion(T3 value)
+    {
+        if (value is null)
+        {
+            throw new global::System.ArgumentNullException(nameof(value));
+        }
+
+        _tag = 3;
+        _value3 = value;
+    }
+
+    public TaggedUnion(T4 value)
+    {
+        if (value is null)
+        {
+            throw new global::System.ArgumentNullException(nameof(value));
+        }
+
+        _tag = 4;
+        _value4 = value;
+    }
+
+    public TaggedUnion(T5 value)
+    {
+        if (value is null)
+        {
+            throw new global::System.ArgumentNullException(nameof(value));
+        }
+
+        _tag = 5;
+        _value5 = value;
+    }
+
+    public TaggedUnion(T6 value)
+    {
+        if (value is null)
+        {
+            throw new global::System.ArgumentNullException(nameof(value));
+        }
+
+        _tag = 6;
+        _value6 = value;
+    }
+
+    public TaggedUnion(T7 value)
+    {
+        if (value is null)
+        {
+            throw new global::System.ArgumentNullException(nameof(value));
+        }
+
+        _tag = 7;
+        _value7 = value;
+    }
+
+    public TaggedUnion(T8 value)
+    {
+        if (value is null)
+        {
+            throw new global::System.ArgumentNullException(nameof(value));
+        }
+
+        _tag = 8;
+        _value8 = value;
+    }
+    #endregion
+
+    #region Overrides
+    public override bool Equals(object? obj)
+    {
+        return obj is TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return _tag switch
+        {
+            0 => 0,
+            1 => global::System.HashCode.Combine(_tag, _value1),
+            2 => global::System.HashCode.Combine(_tag, _value2),
+            3 => global::System.HashCode.Combine(_tag, _value3),
+            4 => global::System.HashCode.Combine(_tag, _value4),
+            5 => global::System.HashCode.Combine(_tag, _value5),
+            6 => global::System.HashCode.Combine(_tag, _value6),
+            7 => global::System.HashCode.Combine(_tag, _value7),
+            8 => global::System.HashCode.Combine(_tag, _value8),
+            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+        };
+    }
+
+    public override string ToString()
+    {
+        return _tag switch
+        {
+            0 => "<Uninitialized>",
+            1 => $"{_value1}",
+            2 => $"{_value2}",
+            3 => $"{_value3}",
+            4 => $"{_value4}",
+            5 => $"{_value5}",
+            6 => $"{_value6}",
+            7 => $"{_value7}",
+            8 => $"{_value8}",
+            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+        };
+    }
+    #endregion
+
+    #region IEquatable<TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>> Interface
+    public bool Equals(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> other)
+    {
+        if (_tag != other._tag)
+        {
+            return false;
+        }
+
+        return _tag switch
+        {
+            0 => true,
+            1 => global::System.Collections.Generic.EqualityComparer<T1>.Default.Equals(
+                _value1!,
+                other._value1!
+            ),
+            2 => global::System.Collections.Generic.EqualityComparer<T2>.Default.Equals(
+                _value2!,
+                other._value2!
+            ),
+            3 => global::System.Collections.Generic.EqualityComparer<T3>.Default.Equals(
+                _value3!,
+                other._value3!
+            ),
+            4 => global::System.Collections.Generic.EqualityComparer<T4>.Default.Equals(
+                _value4!,
+                other._value4!
+            ),
+            5 => global::System.Collections.Generic.EqualityComparer<T5>.Default.Equals(
+                _value5!,
+                other._value5!
+            ),
+            6 => global::System.Collections.Generic.EqualityComparer<T6>.Default.Equals(
+                _value6!,
+                other._value6!
+            ),
+            7 => global::System.Collections.Generic.EqualityComparer<T7>.Default.Equals(
+                _value7!,
+                other._value7!
+            ),
+            8 => global::System.Collections.Generic.EqualityComparer<T8>.Default.Equals(
+                _value8!,
+                other._value8!
+            ),
+            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+        };
+    }
+    #endregion
+
+    #region Methods
+    public bool TryGetValue(
+        [global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] out T1? value
+    )
+    {
+        if (_tag != 1)
+        {
+            value = default;
+
+            return false;
+        }
+
+        value = _value1!;
+
+        return true;
+    }
+
+    public bool TryGetValue(
+        [global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] out T2? value
+    )
+    {
+        if (_tag != 2)
+        {
+            value = default;
+
+            return false;
+        }
+
+        value = _value2!;
+
+        return true;
+    }
+
+    public bool TryGetValue(
+        [global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] out T3? value
+    )
+    {
+        if (_tag != 3)
+        {
+            value = default;
+
+            return false;
+        }
+
+        value = _value3!;
+
+        return true;
+    }
+
+    public bool TryGetValue(
+        [global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] out T4? value
+    )
+    {
+        if (_tag != 4)
+        {
+            value = default;
+
+            return false;
+        }
+
+        value = _value4!;
+
+        return true;
+    }
+
+    public bool TryGetValue(
+        [global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] out T5? value
+    )
+    {
+        if (_tag != 5)
+        {
+            value = default;
+
+            return false;
+        }
+
+        value = _value5!;
+
+        return true;
+    }
+
+    public bool TryGetValue(
+        [global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] out T6? value
+    )
+    {
+        if (_tag != 6)
+        {
+            value = default;
+
+            return false;
+        }
+
+        value = _value6!;
+
+        return true;
+    }
+
+    public bool TryGetValue(
+        [global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] out T7? value
+    )
+    {
+        if (_tag != 7)
+        {
+            value = default;
+
+            return false;
+        }
+
+        value = _value7!;
+
+        return true;
+    }
+
+    public bool TryGetValue(
+        [global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] out T8? value
+    )
+    {
+        if (_tag != 8)
+        {
+            value = default;
+
+            return false;
+        }
+
+        value = _value8!;
+
+        return true;
+    }
+
+    public void Switch(
+        global::System.Action<T1> t1,
+        global::System.Action<T2> t2,
+        global::System.Action<T3> t3,
+        global::System.Action<T4> t4,
+        global::System.Action<T5> t5,
+        global::System.Action<T6> t6,
+        global::System.Action<T7> t7,
+        global::System.Action<T8> t8
+    )
+    {
+        switch (_tag)
+        {
+            case 0:
+                throw new global::System.InvalidOperationException("Value not initialized.");
+            case 1:
+                t1(_value1!);
+                return;
+            case 2:
+                t2(_value2!);
+                return;
+            case 3:
+                t3(_value3!);
+                return;
+            case 4:
+                t4(_value4!);
+                return;
+            case 5:
+                t5(_value5!);
+                return;
+            case 6:
+                t6(_value6!);
+                return;
+            case 7:
+                t7(_value7!);
+                return;
+            case 8:
+                t8(_value8!);
+                return;
+            default:
+                throw new global::System.InvalidOperationException($"Invalid tag: {_tag}");
+        }
+    }
+
+    public TResult Match<TResult>(
+        global::System.Func<T1, TResult> t1,
+        global::System.Func<T2, TResult> t2,
+        global::System.Func<T3, TResult> t3,
+        global::System.Func<T4, TResult> t4,
+        global::System.Func<T5, TResult> t5,
+        global::System.Func<T6, TResult> t6,
+        global::System.Func<T7, TResult> t7,
+        global::System.Func<T8, TResult> t8
+    )
+    {
+        return _tag switch
+        {
+            0 => throw new global::System.InvalidOperationException("Value not initialized."),
+            1 => t1(_value1!),
+            2 => t2(_value2!),
+            3 => t3(_value3!),
+            4 => t4(_value4!),
+            5 => t5(_value5!),
+            6 => t6(_value6!),
+            7 => t7(_value7!),
+            8 => t8(_value8!),
+            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+        };
+    }
+    #endregion
+}

@@ -6,7 +6,7 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <RootNamespace>Macaron.Union</RootNamespace>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFrameworks>netstandard2.1;net11.0</TargetFrameworks>
     <Version>$(TaggedUnionVersion)</Version>
   </PropertyGroup>
 
@@ -27,4 +27,3 @@
   </ItemGroup>
 
 </Project>
-

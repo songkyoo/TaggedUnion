@@ -62,7 +62,25 @@ readonly partial struct IntOrString :
 
 생성된 타입은 비제네릭 `ITaggedUnion`의 `HasValue`와 `Value`, case 목록에 대응하는 제네릭 `ITaggedUnion<T1, ...>`의 `TryGetValue` 계약을 구현합니다.
 
-### 유니온에 포함되는 타입의 제약
+### 범용 TaggedUnion 사용하기
+
+별도의 이름을 가진 유니온 타입이 필요하지 않다면 arity 2부터 8까지 제공되는 `TaggedUnion<T1, ...>` 구조체를 바로 사용할 수 있습니다.
+
+```csharp
+TaggedUnion<int, string> number = 42;
+TaggedUnion<int, string> text = "hello";
+
+var numberValue = (int)number;
+
+if (text.TryGetValue(out string? textValue))
+{
+    Console.WriteLine(textValue);
+}
+```
+
+모든 타입 매개변수에는 `notnull` 제약이 적용되며 생성자와 암시적 변환에 `null`을 전달하면 `ArgumentNullException`이 발생합니다. `TaggedUnion<T1, ...>`는 항상 `ITaggedUnion<T1, ...>`을 구현하며, 공식 Union을 지원하는 환경이라면 Union 문법을 사용할 수 있습니다.
+
+### `[TaggedUnion]` 유니온에 포함되는 타입의 제약
 
 - 타입은 최소 2개, 최대 8개까지 지정할 수 있습니다.
 - 동일한 타입을 지정할 수 없습니다.
