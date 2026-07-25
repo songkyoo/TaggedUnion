@@ -144,15 +144,17 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
 
     private void WritePartialDeclaration(string unionTypeName)
     {
+        var taggedUnionInterfaceTypeName = $"global::Macaron.Union.ITaggedUnion<{string.Join(", ", _caseModels.Select(x => x.FullyQualifiedTypeName))}>";
+
         if (model.SupportsOfficialUnion)
         {
             AppendLine("[global::System.Runtime.CompilerServices.Union]");
-            AppendLine($"readonly partial struct {unionTypeName} : global::System.IEquatable<{unionTypeName}>, global::System.Runtime.CompilerServices.IUnion");
+            AppendLine($"readonly partial struct {unionTypeName} : global::System.IEquatable<{unionTypeName}>, {taggedUnionInterfaceTypeName}, global::System.Runtime.CompilerServices.IUnion");
 
             return;
         }
 
-        AppendLine($"readonly partial struct {unionTypeName} : global::System.IEquatable<{unionTypeName}>");
+        AppendLine($"readonly partial struct {unionTypeName} : global::System.IEquatable<{unionTypeName}>, {taggedUnionInterfaceTypeName}");
     }
 
     private void WriteOperatorOverloads()

@@ -64,6 +64,12 @@ public sealed class SourceGenerationTests
             .SourceText
             .ToString();
         var targetType = outputCompilation.GetTypeByMetadataName("Macaron.Union.Tests.Foo");
+        var taggedUnionInterface = outputCompilation
+            .GetTypeByMetadataName("Macaron.Union.ITaggedUnion`2")!
+            .Construct(
+                outputCompilation.GetSpecialType(SpecialType.System_Int32),
+                outputCompilation.GetSpecialType(SpecialType.System_String)
+            );
 
         Assert.Multiple(() =>
         {
@@ -74,6 +80,12 @@ public sealed class SourceGenerationTests
             );
             Assert.That(targetType, Is.Not.Null);
             Assert.That(targetType!.IsReadOnly, Is.True);
+            Assert.That(
+                targetType.AllInterfaces.Any(
+                    type => SymbolEqualityComparer.Default.Equals(type, taggedUnionInterface)
+                ),
+                Is.True
+            );
             Assert.That(generatedCode, Does.Contain("readonly partial struct Foo"));
         });
     }
@@ -147,7 +159,7 @@ public sealed class SourceGenerationTests
 
             namespace Macaron.Union.Tests
             {
-                readonly partial struct Foo : global::System.IEquatable<Foo>
+                readonly partial struct Foo : global::System.IEquatable<Foo>, global::Macaron.Union.ITaggedUnion<global::Macaron.Union.Tests.Qux<int>, string>
                 {
                     #region Operator Overloads
                     public static bool operator ==(Foo left, Foo right)
@@ -377,7 +389,7 @@ public sealed class SourceGenerationTests
 
             namespace Macaron.Union.Tests
             {
-                readonly partial struct Foo : global::System.IEquatable<Foo>
+                readonly partial struct Foo : global::System.IEquatable<Foo>, global::Macaron.Union.ITaggedUnion<global::Macaron.Union.Tests.Qux, int>
                 {
                     #region Types
                     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Explicit)]
@@ -616,7 +628,7 @@ public sealed class SourceGenerationTests
 
             namespace Macaron.Union.Tests
             {
-                readonly partial struct Foo : global::System.IEquatable<Foo>
+                readonly partial struct Foo : global::System.IEquatable<Foo>, global::Macaron.Union.ITaggedUnion<global::Macaron.Union.Tests.Qux, global::Macaron.Union.Tests.Bar>
                 {
                     #region Operator Overloads
                     public static bool operator ==(Foo left, Foo right)
@@ -852,7 +864,7 @@ public sealed class SourceGenerationTests
 
             namespace Macaron.Union.Tests
             {
-                readonly partial struct Foo : global::System.IEquatable<Foo>
+                readonly partial struct Foo : global::System.IEquatable<Foo>, global::Macaron.Union.ITaggedUnion<global::Macaron.Union.Tests.Qux, string, int, global::Macaron.Union.Tests.Bar, global::Macaron.Union.Tests.Quux, global::Macaron.Union.Tests.Baz>
                 {
                     #region Types
                     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Explicit)]
@@ -1465,6 +1477,7 @@ public sealed class SourceGenerationTests
             """,
             expectedFragments:
             [
+                "global::Macaron.Union.ITaggedUnion<global::Macaron.Union.Tests.C1, global::Macaron.Union.Tests.C2, global::Macaron.Union.Tests.C3, global::Macaron.Union.Tests.C4, global::Macaron.Union.Tests.C5, global::Macaron.Union.Tests.C6, global::Macaron.Union.Tests.C7, global::Macaron.Union.Tests.C8>",
                 "public Foo(global::Macaron.Union.Tests.C1 value)",
                 "public Foo(global::Macaron.Union.Tests.C8 value)"
             ]
@@ -1520,7 +1533,7 @@ public sealed class SourceGenerationTests
             Assert.That(
                 generatedCode,
                 Does.Contain(
-                    "readonly partial struct Foo : global::System.IEquatable<Foo>, global::System.Runtime.CompilerServices.IUnion"
+                    "readonly partial struct Foo : global::System.IEquatable<Foo>, global::Macaron.Union.ITaggedUnion<int, string>, global::System.Runtime.CompilerServices.IUnion"
                 )
             );
         });

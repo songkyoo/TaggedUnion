@@ -28,7 +28,9 @@ public partial struct IntOrString : ITaggedUnionCases<int, string>
 위 코드는 다음과 같은 코드를 생성합니다.(세부 구현은 생략됨)
 
 ```csharp
-readonly partial struct IntOrString : global::System.IEquatable<IntOrString>
+readonly partial struct IntOrString :
+    global::System.IEquatable<IntOrString>,
+    global::Macaron.Union.ITaggedUnion<int, string>
 {
     public static bool operator ==(IntOrString left, IntOrString right);
     public static bool operator !=(IntOrString left, IntOrString right);
@@ -57,6 +59,8 @@ readonly partial struct IntOrString : global::System.IEquatable<IntOrString>
         global::System.Func<string, TResult> @string);
 }
 ```
+
+생성된 타입은 비제네릭 `ITaggedUnion`의 `HasValue`와 `Value`, case 목록에 대응하는 제네릭 `ITaggedUnion<T1, ...>`의 `TryGetValue` 계약을 구현합니다.
 
 ### 유니온에 포함되는 타입의 제약
 

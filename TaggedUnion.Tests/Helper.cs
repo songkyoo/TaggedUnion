@@ -17,7 +17,7 @@ internal static partial class Helper
     );
 
     [GeneratedRegex(
-        pattern: @"^(?<indent>[ \t]*)readonly partial struct (?<typeName>@?[A-Za-z_][A-Za-z0-9_]*) : global::System\.IEquatable<\k<typeName>>\r?$",
+        pattern: @"^(?<indent>[ \t]*)(?<declaration>readonly partial struct (?<typeName>@?[A-Za-z_][A-Za-z0-9_]*) : global::System\.IEquatable<\k<typeName>>, global::Macaron\.Union\.ITaggedUnion<.+>)\r?$",
         options: RegexOptions.Multiline)
     ]
     private static partial Regex UnionDeclarationRegex { get; }
@@ -46,9 +46,9 @@ internal static partial class Helper
             return UnionDeclarationRegex.Replace(expectedCode, match =>
             {
                 var indent = match.Groups["indent"].Value;
-                var typeName = match.Groups["typeName"].Value;
+                var declaration = match.Groups["declaration"].Value;
 
-                return $"{indent}[global::System.Runtime.CompilerServices.Union]\n{indent}readonly partial struct {typeName} : global::System.IEquatable<{typeName}>, global::System.Runtime.CompilerServices.IUnion";
+                return $"{indent}[global::System.Runtime.CompilerServices.Union]\n{indent}{declaration}, global::System.Runtime.CompilerServices.IUnion";
             });
         }
         #endregion

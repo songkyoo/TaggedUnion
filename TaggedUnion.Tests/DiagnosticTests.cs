@@ -1,3 +1,5 @@
+using Microsoft.CodeAnalysis;
+
 using static Macaron.Union.Tests.Helper;
 
 namespace Macaron.Union.Tests;
@@ -319,6 +321,39 @@ public sealed class DiagnosticTests
             """,
             expectedDiagnosticId: "MTU0005"
         );
+    }
+
+    [Test]
+    public void InvalidTargetDoesNotReportInterfaceImplementationDiagnostic()
+    {
+        var (compilation, driver) = CreateCompilationAndDriver(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnionCases<string, string>
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
+            assemblyName: "Macaron.TaggedUnion.Tests",
+            generators: [new TaggedUnionGenerator().AsSourceGenerator()]
+        );
+
+        driver.RunGeneratorsAndUpdateCompilation(
+            compilation,
+            out var outputCompilation,
+            out var generatorDiagnostics
+        );
+        var errorDiagnosticIds = outputCompilation
+            .GetDiagnostics()
+            .Concat(generatorDiagnostics)
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .Select(diagnostic => diagnostic.Id)
+            .ToArray();
+
+        Assert.That(errorDiagnosticIds, Is.EqualTo(new[] { "MTU0005" }));
     }
 
     [Test]
