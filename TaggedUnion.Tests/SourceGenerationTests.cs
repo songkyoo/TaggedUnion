@@ -186,6 +186,19 @@ public sealed class SourceGenerationTests
                         };
                     }
 
+                    public static implicit operator Foo(global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux<int>, string> value)
+                    {
+                        var tag = global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux<int>, string>.GetTag(in value);
+
+                        return tag switch
+                        {
+                            0 => default,
+                            1 => new Foo((global::Macaron.Union.Tests.Qux<int>)value),
+                            2 => new Foo((string)value),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {tag}"),
+                        };
+                    }
+
                     public static implicit operator Foo(global::Macaron.Union.Tests.Qux<int> value)
                     {
                         return new Foo(value);
@@ -436,6 +449,19 @@ public sealed class SourceGenerationTests
                         };
                     }
 
+                    public static implicit operator Foo(global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, int> value)
+                    {
+                        var tag = global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, int>.GetTag(in value);
+
+                        return tag switch
+                        {
+                            0 => default,
+                            1 => new Foo((global::Macaron.Union.Tests.Qux)value),
+                            2 => new Foo((int)value),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {tag}"),
+                        };
+                    }
+
                     public static implicit operator Foo(global::Macaron.Union.Tests.Qux value)
                     {
                         return new Foo(value);
@@ -674,6 +700,19 @@ public sealed class SourceGenerationTests
                             1 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, global::Macaron.Union.Tests.Bar>(value.__1),
                             2 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, global::Macaron.Union.Tests.Bar>(value.__2),
                             _ => throw new global::System.InvalidOperationException($"Invalid tag: {value._tag}"),
+                        };
+                    }
+
+                    public static implicit operator Foo(global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, global::Macaron.Union.Tests.Bar> value)
+                    {
+                        var tag = global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, global::Macaron.Union.Tests.Bar>.GetTag(in value);
+
+                        return tag switch
+                        {
+                            0 => default,
+                            1 => new Foo((global::Macaron.Union.Tests.Qux)value),
+                            2 => new Foo((global::Macaron.Union.Tests.Bar)value),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {tag}"),
                         };
                     }
 
@@ -934,6 +973,23 @@ public sealed class SourceGenerationTests
                             5 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, string, int, global::Macaron.Union.Tests.Bar, global::Macaron.Union.Tests.Quux, global::Macaron.Union.Tests.Baz>(value.__5),
                             6 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, string, int, global::Macaron.Union.Tests.Bar, global::Macaron.Union.Tests.Quux, global::Macaron.Union.Tests.Baz>(value.__6),
                             _ => throw new global::System.InvalidOperationException($"Invalid tag: {value._tag}"),
+                        };
+                    }
+
+                    public static implicit operator Foo(global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, string, int, global::Macaron.Union.Tests.Bar, global::Macaron.Union.Tests.Quux, global::Macaron.Union.Tests.Baz> value)
+                    {
+                        var tag = global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, string, int, global::Macaron.Union.Tests.Bar, global::Macaron.Union.Tests.Quux, global::Macaron.Union.Tests.Baz>.GetTag(in value);
+
+                        return tag switch
+                        {
+                            0 => default,
+                            1 => new Foo((global::Macaron.Union.Tests.Qux)value),
+                            2 => new Foo((string)value),
+                            3 => new Foo((int)value),
+                            4 => new Foo((global::Macaron.Union.Tests.Bar)value),
+                            5 => new Foo((global::Macaron.Union.Tests.Quux)value),
+                            6 => new Foo((global::Macaron.Union.Tests.Baz)value),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {tag}"),
                         };
                     }
 
@@ -1454,7 +1510,14 @@ public sealed class SourceGenerationTests
                     "implicit operator global::Macaron.Union.TaggedUnion<int, string>(Foo value)"
                 )
             );
-            Assert.That(generatedCode, Does.Not.Contain("implicit operator Foo("));
+            Assert.That(
+                generatedCode,
+                Does.Contain(
+                    "implicit operator Foo(global::Macaron.Union.TaggedUnion<int, string> value)"
+                )
+            );
+            Assert.That(generatedCode, Does.Not.Contain("implicit operator Foo(int value)"));
+            Assert.That(generatedCode, Does.Not.Contain("implicit operator Foo(string value)"));
             Assert.That(generatedCode, Does.Not.Contain("explicit operator"));
             Assert.That(generatedCode, Does.Contain("public Foo(int value)"));
             Assert.That(generatedCode, Does.Contain("public Foo(string value)"));
@@ -1462,7 +1525,7 @@ public sealed class SourceGenerationTests
     }
 
     [Test]
-    public void GeneratedUnionImplicitlyConvertsToRuntimeTaggedUnion()
+    public void GeneratedAndRuntimeTaggedUnionsImplicitlyConvertBothWays()
     {
         var (compilation, driver) = CreateCompilationAndDriver(
             sourceCode:
@@ -1493,6 +1556,27 @@ public sealed class SourceGenerationTests
                 public static bool ConvertDefault()
                 {
                     TaggedUnion<int, string> value = default(Foo);
+
+                    return !value.HasValue;
+                }
+
+                public static object? ConvertIntBack()
+                {
+                    Foo value = new TaggedUnion<int, string>(42);
+
+                    return value.Value;
+                }
+
+                public static object? ConvertStringBack()
+                {
+                    Foo value = new TaggedUnion<int, string>("value");
+
+                    return value.Value;
+                }
+
+                public static bool ConvertDefaultBack()
+                {
+                    Foo value = default(TaggedUnion<int, string>);
 
                     return !value.HasValue;
                 }
@@ -1549,6 +1633,102 @@ public sealed class SourceGenerationTests
             Assert.That(
                 scenarioType.GetMethod("ConvertDefault")!.Invoke(obj: null, parameters: null),
                 Is.EqualTo(true)
+            );
+            Assert.That(
+                scenarioType.GetMethod("ConvertIntBack")!.Invoke(obj: null, parameters: null),
+                Is.EqualTo(42)
+            );
+            Assert.That(
+                scenarioType.GetMethod("ConvertStringBack")!.Invoke(obj: null, parameters: null),
+                Is.EqualTo("value")
+            );
+            Assert.That(
+                scenarioType.GetMethod("ConvertDefaultBack")!.Invoke(obj: null, parameters: null),
+                Is.EqualTo(true)
+            );
+        });
+    }
+
+    [Test]
+    public void RuntimeTaggedUnionConversionRemapsPositionalTagsToGeneratedTags()
+    {
+        var (compilation, driver) = CreateCompilationAndDriver(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests.GeneratedCustomTagConversion;
+
+            [TaggedUnion]
+            [TaggedUnionCase(typeof(int), tag: 42)]
+            [TaggedUnionCase(typeof(string), tag: 7)]
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
+            {
+                public byte TagForTest => _tag;
+            }
+
+            public static class Scenario
+            {
+                public static byte ConvertInt()
+                {
+                    Foo value = new TaggedUnion<int, string>(42);
+
+                    return value.TagForTest;
+                }
+
+                public static byte ConvertString()
+                {
+                    Foo value = new TaggedUnion<int, string>("value");
+
+                    return value.TagForTest;
+                }
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
+            assemblyName: "Macaron.TaggedUnion.Tests.GeneratedCustomTagConversion",
+            generators: [new TaggedUnionGenerator().AsSourceGenerator()]
+        );
+
+        driver.RunGeneratorsAndUpdateCompilation(
+            compilation,
+            out var outputCompilation,
+            out var generatorDiagnostics
+        );
+        var errorDiagnostics = outputCompilation
+            .GetDiagnostics()
+            .Concat(generatorDiagnostics)
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        Assert.That(
+            errorDiagnostics,
+            Is.Empty,
+            string.Join(Environment.NewLine, errorDiagnostics.Select(x => x.ToString()))
+        );
+
+        using var stream = new MemoryStream();
+        var emitResult = outputCompilation.Emit(stream);
+
+        Assert.That(
+            emitResult.Success,
+            Is.True,
+            string.Join(Environment.NewLine, emitResult.Diagnostics.Select(x => x.ToString()))
+        );
+
+        var scenarioType = Assembly
+            .Load(stream.ToArray())
+            .GetType(
+                "Macaron.Union.Tests.GeneratedCustomTagConversion.Scenario",
+                throwOnError: true
+            )!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                scenarioType.GetMethod("ConvertInt")!.Invoke(obj: null, parameters: null),
+                Is.EqualTo((byte)42)
+            );
+            Assert.That(
+                scenarioType.GetMethod("ConvertString")!.Invoke(obj: null, parameters: null),
+                Is.EqualTo((byte)7)
             );
         });
     }
@@ -1625,6 +1805,7 @@ public sealed class SourceGenerationTests
             expectedFragments:
             [
                 "implicit operator global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.C1, global::Macaron.Union.Tests.C2, global::Macaron.Union.Tests.C3, global::Macaron.Union.Tests.C4, global::Macaron.Union.Tests.C5, global::Macaron.Union.Tests.C6, global::Macaron.Union.Tests.C7, global::Macaron.Union.Tests.C8>(Foo value)",
+                "implicit operator Foo(global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.C1, global::Macaron.Union.Tests.C2, global::Macaron.Union.Tests.C3, global::Macaron.Union.Tests.C4, global::Macaron.Union.Tests.C5, global::Macaron.Union.Tests.C6, global::Macaron.Union.Tests.C7, global::Macaron.Union.Tests.C8> value)",
                 "global::Macaron.Union.ITaggedUnion<global::Macaron.Union.Tests.C1, global::Macaron.Union.Tests.C2, global::Macaron.Union.Tests.C3, global::Macaron.Union.Tests.C4, global::Macaron.Union.Tests.C5, global::Macaron.Union.Tests.C6, global::Macaron.Union.Tests.C7, global::Macaron.Union.Tests.C8>",
                 "public Foo(global::Macaron.Union.Tests.C1 value)",
                 "public Foo(global::Macaron.Union.Tests.C8 value)"

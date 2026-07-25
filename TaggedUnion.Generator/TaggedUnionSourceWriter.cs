@@ -194,6 +194,34 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
         AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{value.{TagField}}}\"),");
         AppendLine($"{Indent}}};");
         AppendLine("}");
+        AppendLine();
+        AppendLine($"public static implicit operator {typeName}({taggedUnionTypeName} value)");
+        AppendLine("{");
+        AppendLine($"{Indent}var tag = {taggedUnionTypeName}.GetTag(in value);");
+        AppendLine();
+        AppendLine($"{Indent}return tag switch");
+        AppendLine($"{Indent}{{");
+        AppendLine($"{Indent}{Indent}0 => default,");
+
+        for (var i = 0; i < _caseModels.Length; i++)
+        {
+            var caseContext = _caseModels[i];
+
+            if (caseContext.IsInterfaceType)
+            {
+                AppendLine($"{Indent}{Indent}{i + 1} => value.TryGetValue(out {caseContext.FullyQualifiedTypeName}? result{i + 1})");
+                AppendLine($"{Indent}{Indent}{Indent}? new {typeName}(result{i + 1})");
+                AppendLine($"{Indent}{Indent}{Indent}: throw new global::System.InvalidOperationException($\"Invalid tag: {{tag}}\"),");
+            }
+            else
+            {
+                AppendLine($"{Indent}{Indent}{i + 1} => new {typeName}(({caseContext.FullyQualifiedTypeName})value),");
+            }
+        }
+
+        AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{tag}}\"),");
+        AppendLine($"{Indent}}};");
+        AppendLine("}");
 
         if (caseContexts.Length > 0)
         {

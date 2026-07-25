@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Reflection;
 
 namespace Macaron.Union.Tests;
@@ -53,6 +54,13 @@ public sealed class RuntimeTaggedUnionTests
                 );
                 Assert.That(
                     taggedUnionType
+                        .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                        .Count(method => method.Name == nameof(TaggedUnion<int, string>.GetTag)),
+                    Is.EqualTo(1),
+                    taggedUnionType.FullName
+                );
+                Assert.That(
+                    taggedUnionType
                         .GetMethods(BindingFlags.Public | BindingFlags.Instance)
                         .Count(method => method.Name == nameof(TaggedUnion<int, string>.TryGetValue)),
                     Is.EqualTo(arity),
@@ -89,6 +97,27 @@ public sealed class RuntimeTaggedUnionTests
                 () => value.Match(_ => 1, _ => 2),
                 Throws.TypeOf<InvalidOperationException>()
             );
+        });
+    }
+
+    [Test]
+    public void GetTagReturnsThePositionalTagAndIsHiddenFromEditorCompletion()
+    {
+        var defaultValue = default(TaggedUnion<int, string>);
+        var intValue = new TaggedUnion<int, string>(42);
+        var stringValue = new TaggedUnion<int, string>("value");
+        var getTagMethod = typeof(TaggedUnion<int, string>).GetMethod(
+            nameof(TaggedUnion<int, string>.GetTag),
+            BindingFlags.Public | BindingFlags.Static
+        )!;
+        var editorBrowsable = getTagMethod.GetCustomAttribute<EditorBrowsableAttribute>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(TaggedUnion<int, string>.GetTag(in defaultValue), Is.Zero);
+            Assert.That(TaggedUnion<int, string>.GetTag(in intValue), Is.EqualTo(1));
+            Assert.That(TaggedUnion<int, string>.GetTag(in stringValue), Is.EqualTo(2));
+            Assert.That(editorBrowsable?.State, Is.EqualTo(EditorBrowsableState.Never));
         });
     }
 
@@ -195,6 +224,19 @@ public sealed class RuntimeTaggedUnionTests
             Assert.That(result?.Value, Is.EqualTo("value"));
             Assert.That(matchedCase, Is.EqualTo(8));
             Assert.That(((Case8)value).Value, Is.EqualTo("value"));
+            Assert.That(
+                TaggedUnion<
+                    Case1,
+                    Case2,
+                    Case3,
+                    Case4,
+                    Case5,
+                    Case6,
+                    Case7,
+                    Case8
+                >.GetTag(in value),
+                Is.EqualTo(8)
+            );
         });
     }
 

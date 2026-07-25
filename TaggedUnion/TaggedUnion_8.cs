@@ -405,6 +405,12 @@ public readonly struct TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> :
     #endregion
 
     #region Methods
+    [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
+    public static byte GetTag(in TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> value)
+    {
+        return value._tag;
+    }
+
     public bool TryGetValue(
         [global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] out T1? value
     )

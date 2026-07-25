@@ -57,6 +57,14 @@ public sealed class OfficialUnionTests
 
                     return union.Value!;
                 }
+
+                public static object ConvertBack()
+                {
+                    TaggedUnion<IValue, int> value = new Value();
+                    ValueOrInt union = value;
+
+                    return union.Value!;
+                }
             }
             """,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
@@ -97,7 +105,15 @@ public sealed class OfficialUnionTests
             );
             Assert.That(
                 generatedCode,
-                Does.Not.Contain("implicit operator ValueOrInt(")
+                Does.Not.Contain(
+                    "implicit operator ValueOrInt(global::Macaron.Union.Tests.OfficialUnion.Generated.IValue value)"
+                )
+            );
+            Assert.That(
+                generatedCode,
+                Does.Contain(
+                    "value.TryGetValue(out global::Macaron.Union.Tests.OfficialUnion.Generated.IValue? result1)"
+                )
             );
         });
 
@@ -118,11 +134,25 @@ public sealed class OfficialUnionTests
             )!
             .GetMethod("Convert", BindingFlags.Public | BindingFlags.Static)!
             .Invoke(obj: null, parameters: null);
+        var convertedBack = assembly
+            .GetType(
+                "Macaron.Union.Tests.OfficialUnion.Generated.Scenario",
+                throwOnError: true
+            )!
+            .GetMethod("ConvertBack", BindingFlags.Public | BindingFlags.Static)!
+            .Invoke(obj: null, parameters: null);
 
-        Assert.That(
-            result!.GetType().FullName,
-            Is.EqualTo("Macaron.Union.Tests.OfficialUnion.Generated.Value")
-        );
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                result!.GetType().FullName,
+                Is.EqualTo("Macaron.Union.Tests.OfficialUnion.Generated.Value")
+            );
+            Assert.That(
+                convertedBack!.GetType().FullName,
+                Is.EqualTo("Macaron.Union.Tests.OfficialUnion.Generated.Value")
+            );
+        });
     }
 
     private interface IRuntimeValue
