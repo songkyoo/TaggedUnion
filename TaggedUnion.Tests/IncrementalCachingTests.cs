@@ -80,6 +80,40 @@ public sealed class IncrementalCachingTests
             ]
         );
     }
+
+    [Test]
+    public void TaggedUnionJsonSerializerGeneratorCachesSourceOutputWhenConversionOperatorPolicyChanges()
+    {
+        AssertSourceOutputIsCached(
+            generator: new TaggedUnionJsonSerializerGenerator(),
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnionJsonSerializer]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            updatedSourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(typeof(int), typeof(string), GenerateConversionOperators = true)]
+            [TaggedUnionJsonSerializer]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            additionalAssemblies:
+            [
+                typeof(TaggedUnionAttribute).Assembly,
+                typeof(TaggedUnionJsonSerializerAttribute).Assembly,
+                typeof(JsonSerializer).Assembly,
+            ]
+        );
+    }
     #endregion
 
     #region Static Methods

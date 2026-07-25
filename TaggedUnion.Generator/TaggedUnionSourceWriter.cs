@@ -17,7 +17,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
     private readonly StringBuilder _builder = new();
     private readonly UnionCaseSourceGenerationModel[] _caseModels = model
         .Cases
-        .Select(CreateSourceGenerationModel)
+        .Select(x => CreateSourceGenerationModel(x, model.GenerateConversionOperators))
         .ToArray();
     private string _leadingWhitespace = "";
     #endregion

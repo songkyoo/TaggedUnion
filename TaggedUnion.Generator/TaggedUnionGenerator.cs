@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -10,7 +11,44 @@ namespace Macaron.Union;
 [Generator(LanguageNames.CSharp)]
 public sealed class TaggedUnionGenerator : IIncrementalGenerator
 {
+    #region Types
+    private abstract record TaggedUnionAnalysisResult
+    {
+        public sealed record Success(
+            UnionGenerationModel Model,
+            bool GenerateConversionOperators
+        ) : TaggedUnionAnalysisResult;
+
+        public sealed record Failure(
+            ImmutableArray<UnionAnalysisError> Errors
+        ) : TaggedUnionAnalysisResult;
+    }
+    #endregion
+
     #region Static Methods
+    private static TaggedUnionAnalysisResult CreateAnalysisResult(
+        GeneratorAttributeSyntaxContext context,
+        CancellationToken cancellationToken
+    )
+    {
+        var taggedUnionAttribute = context.Attributes[0];
+        var result = UnionGenerationModelFactory.Create(
+            context,
+            taggedUnionAttribute,
+            cancellationToken
+        );
+
+        return result switch
+        {
+            AnalysisResult.Success success => new TaggedUnionAnalysisResult.Success(
+                Model: success.Model,
+                GenerateConversionOperators: ConversionOperatorGenerationPolicy.IsEnabled(taggedUnionAttribute)
+            ),
+            AnalysisResult.Failure failure => new TaggedUnionAnalysisResult.Failure(failure.Errors),
+            _ => throw new InvalidOperationException($"Invalid analysis result: {result}"),
+        };
+    }
+
     private static Diagnostic? CreateMissingTaggedUnionAttributeDiagnostic(
         GeneratorAttributeSyntaxContext context,
         CancellationToken cancellationToken
@@ -62,16 +100,20 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
             .ForAttributeWithMetadataName(
                 fullyQualifiedMetadataName: TaggedUnionAttribute,
                 predicate: (syntaxNode, _) => syntaxNode is StructDeclarationSyntax,
-                transform: (attributeContext, cancellationToken) => UnionGenerationModelFactory.Create(
-                    context: attributeContext,
-                    taggedUnionAttribute: attributeContext.Attributes[0],
-                    cancellationToken
-                )
+                transform: CreateAnalysisResult
             )
             .WithTrackingName(nameof(AnalysisResult));
         var unionGenerationModelProvider = analysisResultProvider
-            .Where(static x => x is AnalysisResult.Success)
-            .Select(static (x, _) => ((AnalysisResult.Success)x).Model)
+            .Where(static x => x is TaggedUnionAnalysisResult.Success)
+            .Select(static (x, _) =>
+            {
+                var success = (TaggedUnionAnalysisResult.Success)x;
+
+                return new TaggedUnionGenerationModel(
+                    Union: success.Model,
+                    GenerateConversionOperators: success.GenerateConversionOperators
+                );
+            })
             .WithTrackingName(nameof(UnionGenerationModel));
         var supportsOfficialUnionProvider = context
             .CompilationProvider
@@ -80,22 +122,20 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         var sourceGenerationModelProvider = unionGenerationModelProvider
             .Combine(supportsOfficialUnionProvider)
             .Select(static (pair, _) => new TaggedUnionSourceGenerationModel(
-                Union: pair.Left,
+                Model: pair.Left,
                 SupportsOfficialUnion: pair.Right
             ))
             .WithTrackingName(nameof(TaggedUnionSourceGenerationModel));
 
         context.RegisterSourceOutput(
             source: analysisResultProvider
-                .Where(x => x is AnalysisResult.Failure)
-                .Select((x, _) => ((AnalysisResult.Failure)x).Errors),
+                .Where(static x => x is TaggedUnionAnalysisResult.Failure)
+                .Select(static (x, _) => ((TaggedUnionAnalysisResult.Failure)x).Errors),
             action: static (sourceProductionContext, errors) =>
             {
                 foreach (var error in errors)
                 {
-                    sourceProductionContext.ReportDiagnostic(
-                        TaggedUnionDiagnostics.CreateDiagnostic(error)
-                    );
+                    sourceProductionContext.ReportDiagnostic(TaggedUnionDiagnostics.CreateDiagnostic(error));
                 }
             }
         );

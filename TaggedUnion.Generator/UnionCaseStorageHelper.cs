@@ -5,7 +5,8 @@ namespace Macaron.Union;
 internal static class UnionCaseStorageHelper
 {
     public static UnionCaseSourceGenerationModel CreateSourceGenerationModel(
-        UnionCaseGenerationModel model
+        UnionCaseGenerationModel model,
+        bool generateConversionOperators
     )
     {
         var storageKind = model switch
@@ -17,7 +18,10 @@ internal static class UnionCaseStorageHelper
 
         return new UnionCaseSourceGenerationModel(
             StorageKind: storageKind,
-            SupportsConversionOperators: model.SupportsConversionOperators,
+            SupportsConversionOperators: ConversionOperatorGenerationPolicy.SupportsCase(
+                model,
+                generateConversionOperators
+            ),
             FullyQualifiedTypeName: model.FullyQualifiedTypeName,
             ParamName: model.ParamName,
             Tag: model.Tag

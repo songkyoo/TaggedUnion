@@ -104,13 +104,6 @@ internal static class UnionGenerationModelFactory
             return new AnalysisResult.Failure(errorsBuilder.ToImmutable());
         }
 
-        var generateConversionOperators = taggedUnionAttribute
-            .NamedArguments
-            .Any(x => x is
-            {
-                Key: TaggedUnionMetadataNames.GenerateConversionOperatorsProperty,
-                Value.Value: true,
-            });
         var casesBuilder = ImmutableArray.CreateBuilder<UnionCaseGenerationModel>();
 
         foreach (var caseCandidate in caseCandidates)
@@ -119,7 +112,7 @@ internal static class UnionGenerationModelFactory
             var caseModel = new UnionCaseGenerationModel(
                 IsReferenceType: caseTypeSymbol.IsReferenceType,
                 IsUnmanagedType: caseTypeSymbol.IsUnmanagedType,
-                SupportsConversionOperators: generateConversionOperators && caseTypeSymbol.TypeKind != Interface,
+                IsInterfaceType: caseTypeSymbol.TypeKind == Interface,
                 FullyQualifiedTypeName: GetCaseTypeName(caseTypeSymbol),
                 ParamName: caseCandidate.ParamName,
                 Tag: caseCandidate.Tag

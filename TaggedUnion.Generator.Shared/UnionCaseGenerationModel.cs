@@ -3,7 +3,7 @@
 internal sealed record UnionCaseGenerationModel(
     bool IsReferenceType,
     bool IsUnmanagedType,
-    bool SupportsConversionOperators,
+    bool IsInterfaceType,
     string FullyQualifiedTypeName,
     string ParamName,
     byte Tag
