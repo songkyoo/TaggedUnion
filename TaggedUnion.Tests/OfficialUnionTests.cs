@@ -29,7 +29,7 @@ public sealed class OfficialUnionTests
 
             [global::Macaron.Union.TaggedUnion]
             public readonly partial struct ValueOrInt
-                : global::Macaron.Union.ITaggedUnion<IValue, int>
+                : global::Macaron.Union.ITaggedUnionCases<IValue, int>
             {
             }
 

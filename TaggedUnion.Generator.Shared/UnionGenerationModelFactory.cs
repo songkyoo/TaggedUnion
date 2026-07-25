@@ -16,7 +16,7 @@ namespace Macaron.Union;
 internal static class UnionGenerationModelFactory
 {
     #region Types
-    private sealed record TaggedUnionInterfaceContext(
+    private sealed record TaggedUnionCasesInterfaceContext(
         INamedTypeSymbol TypeSymbol,
         Location Location,
         ImmutableArray<Location> TypeArgumentLocations
@@ -62,16 +62,16 @@ internal static class UnionGenerationModelFactory
             return AnalysisResult.Failure.Empty;
         }
 
-        var taggedUnionInterfaces = GetTaggedUnionInterfaceContexts(
+        var taggedUnionCasesInterfaces = GetTaggedUnionCasesInterfaceContexts(
             targetTypeSymbol,
             context.SemanticModel.Compilation,
             cancellationToken
         );
 
-        if (taggedUnionInterfaces.Length == 0)
+        if (taggedUnionCasesInterfaces.Length == 0)
         {
             return new AnalysisResult.Failure(
-                new UnionAnalysisError.TargetTypeMustImplementTaggedUnionInterface(
+                new UnionAnalysisError.TargetTypeMustImplementTaggedUnionCasesInterface(
                     Location: taggedUnionAttribute.ApplicationSyntaxReference
                         ?.GetSyntax(cancellationToken)
                         .GetLocation()
@@ -81,17 +81,17 @@ internal static class UnionGenerationModelFactory
             );
         }
 
-        if (taggedUnionInterfaces.Length > 1)
+        if (taggedUnionCasesInterfaces.Length > 1)
         {
             return new AnalysisResult.Failure(
-                new UnionAnalysisError.TargetTypeCannotImplementMultipleTaggedUnionInterfaces(
-                    Location: taggedUnionInterfaces[1].Location,
+                new UnionAnalysisError.TargetTypeCannotImplementMultipleTaggedUnionCasesInterfaces(
+                    Location: taggedUnionCasesInterfaces[1].Location,
                     TargetTypeName: structDeclarationSyntax.Identifier.ToString()
                 )
             );
         }
 
-        var caseCandidates = CreateUnionCaseCandidates(taggedUnionInterfaces[0]);
+        var caseCandidates = CreateUnionCaseCandidates(taggedUnionCasesInterfaces[0]);
 
         if (!TryGetCaseAttributeContexts(
             attributes: context
@@ -382,16 +382,16 @@ internal static class UnionGenerationModelFactory
     }
 
     private static ImmutableArray<UnionCaseCandidateContext> CreateUnionCaseCandidates(
-        TaggedUnionInterfaceContext taggedUnionInterface
+        TaggedUnionCasesInterfaceContext taggedUnionCasesInterface
     )
     {
-        var typeArguments = taggedUnionInterface.TypeSymbol.TypeArguments;
+        var typeArguments = taggedUnionCasesInterface.TypeSymbol.TypeArguments;
         var builder = ImmutableArray.CreateBuilder<UnionCaseCandidateContext>(typeArguments.Length);
 
         for (var i = 0; i < typeArguments.Length; i++)
         {
             var typeSymbol = typeArguments[i];
-            var typeLocation = taggedUnionInterface.TypeArgumentLocations[i];
+            var typeLocation = taggedUnionCasesInterface.TypeArgumentLocations[i];
 
             builder.Add(new UnionCaseCandidateContext(
                 TypeLocation: typeLocation,
@@ -409,7 +409,7 @@ internal static class UnionGenerationModelFactory
         return builder.ToImmutable();
     }
 
-    private static ImmutableArray<TaggedUnionInterfaceContext> GetTaggedUnionInterfaceContexts(
+    private static ImmutableArray<TaggedUnionCasesInterfaceContext> GetTaggedUnionCasesInterfaceContexts(
         INamedTypeSymbol targetTypeSymbol,
         Compilation compilation,
         CancellationToken cancellationToken
@@ -418,12 +418,12 @@ internal static class UnionGenerationModelFactory
         var interfaceDefinitions = Enumerable
             .Range(2, 7)
             .Select(arity => compilation.GetTypeByMetadataName(
-                $"{TaggedUnionMetadataNames.TaggedUnionInterface}`{arity}"
+                $"{TaggedUnionMetadataNames.TaggedUnionCasesInterface}`{arity}"
             ))
             .Where(static symbol => symbol != null)
             .Select(static symbol => symbol!)
             .ToImmutableHashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-        var builder = ImmutableArray.CreateBuilder<TaggedUnionInterfaceContext>();
+        var builder = ImmutableArray.CreateBuilder<TaggedUnionCasesInterfaceContext>();
 
         foreach (var interfaceSymbol in targetTypeSymbol.Interfaces)
         {
@@ -445,7 +445,7 @@ internal static class UnionGenerationModelFactory
                 location
             );
 
-            builder.Add(new TaggedUnionInterfaceContext(
+            builder.Add(new TaggedUnionCasesInterfaceContext(
                 TypeSymbol: interfaceSymbol,
                 Location: location,
                 TypeArgumentLocations: typeArgumentLocations
@@ -499,7 +499,7 @@ internal static class UnionGenerationModelFactory
                 .DescendantNodesAndSelf()
                 .OfType<GenericNameSyntax>()
                 .LastOrDefault(node =>
-                    node.Identifier.ValueText == "ITaggedUnion"
+                    node.Identifier.ValueText == "ITaggedUnionCases"
                     && node.TypeArgumentList.Arguments.Count == arity
                 );
 

@@ -103,19 +103,19 @@ internal static class TaggedUnionDiagnostics
         isEnabledByDefault: true
     );
 
-    public static readonly DiagnosticDescriptor TargetTypeMustImplementTaggedUnionInterfaceRule = new(
+    public static readonly DiagnosticDescriptor TargetTypeMustImplementTaggedUnionCasesInterfaceRule = new(
         id: "MTU0012",
-        title: "Target type must implement ITaggedUnion",
-        messageFormat: "Tagged union target type '{0}' must directly implement an ITaggedUnion interface.",
+        title: "Target type must implement ITaggedUnionCases",
+        messageFormat: "Tagged union target type '{0}' must directly implement an ITaggedUnionCases interface.",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
 
-    public static readonly DiagnosticDescriptor TargetTypeCannotImplementMultipleTaggedUnionInterfacesRule = new(
+    public static readonly DiagnosticDescriptor TargetTypeCannotImplementMultipleTaggedUnionCasesInterfacesRule = new(
         id: "MTU0013",
-        title: "Target type cannot implement multiple ITaggedUnion interfaces",
-        messageFormat: "Tagged union target type '{0}' cannot directly implement multiple ITaggedUnion interfaces.",
+        title: "Target type cannot implement multiple ITaggedUnionCases interfaces",
+        messageFormat: "Tagged union target type '{0}' cannot directly implement multiple ITaggedUnionCases interfaces.",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
@@ -149,13 +149,13 @@ internal static class TaggedUnionDiagnostics
                 location: value.Location,
                 messageArgs: [value.TargetTypeName]
             ),
-            UnionAnalysisError.TargetTypeMustImplementTaggedUnionInterface value => Diagnostic.Create(
-                descriptor: TargetTypeMustImplementTaggedUnionInterfaceRule,
+            UnionAnalysisError.TargetTypeMustImplementTaggedUnionCasesInterface value => Diagnostic.Create(
+                descriptor: TargetTypeMustImplementTaggedUnionCasesInterfaceRule,
                 location: value.Location,
                 messageArgs: [value.TargetTypeName]
             ),
-            UnionAnalysisError.TargetTypeCannotImplementMultipleTaggedUnionInterfaces value => Diagnostic.Create(
-                descriptor: TargetTypeCannotImplementMultipleTaggedUnionInterfacesRule,
+            UnionAnalysisError.TargetTypeCannotImplementMultipleTaggedUnionCasesInterfaces value => Diagnostic.Create(
+                descriptor: TargetTypeCannotImplementMultipleTaggedUnionCasesInterfacesRule,
                 location: value.Location,
                 messageArgs: [value.TargetTypeName]
             ),

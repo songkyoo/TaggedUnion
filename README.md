@@ -12,18 +12,18 @@ dotnet pack ./TaggedUnion/TaggedUnion.csproj -c Release
 
 ## 사용법
 
-유니온으로 사용할 타입을 `partial struct`로 선언하고 `TaggedUnion` 어트리뷰트를 적용합니다. `record struct`는 지원하지 않습니다. 포함될 타입은 `ITaggedUnion<T1, ...>` 인터페이스의 타입 인자로 지정하며, 유니온 타입 자기 자신은 케이스 타입으로 지정할 수 없습니다. `TaggedUnion`이 선언되는 타입은 제네릭이 아니어야 하고 인스턴스 생성자를 가질 수 없습니다.
+유니온으로 사용할 타입을 `partial struct`로 선언하고 `TaggedUnion` 어트리뷰트를 적용합니다. `record struct`는 지원하지 않습니다. 포함될 타입은 `ITaggedUnionCases<T1, ...>` 인터페이스의 타입 인자로 지정하며, 유니온 타입 자기 자신은 케이스 타입으로 지정할 수 없습니다. `TaggedUnion`이 선언되는 타입은 제네릭이 아니어야 하고 인스턴스 생성자를 가질 수 없습니다.
 
 ```csharp
 using Macaron.Union;
 
 [TaggedUnion]
-public partial struct IntOrString : ITaggedUnion<int, string>
+public partial struct IntOrString : ITaggedUnionCases<int, string>
 {
 }
 ```
 
-코드 생성은 `TaggedUnion` 어트리뷰트가 적용된 타입만 대상으로 합니다. `ITaggedUnion<T1, ...>`만 구현한 타입은 무시되며, `TaggedUnion` 대상은 2개부터 8개까지의 타입 인자를 가진 `ITaggedUnion<T1, ...>` 인터페이스를 정확히 하나 직접 구현해야 합니다.
+코드 생성은 `TaggedUnion` 어트리뷰트가 적용된 타입만 대상으로 합니다. `ITaggedUnionCases<T1, ...>`만 구현한 타입은 무시되며, `TaggedUnion` 대상은 2개부터 8개까지의 타입 인자를 가진 `ITaggedUnionCases<T1, ...>` 인터페이스를 정확히 하나 직접 구현해야 합니다.
 
 위 코드는 다음과 같은 코드를 생성합니다.(세부 구현은 생략됨)
 
@@ -81,7 +81,7 @@ IntOrString text = new("hello");
 
 ```csharp
 [TaggedUnion(GenerateConversionOperators = true)]
-public partial struct IntOrString : ITaggedUnion<int, string>
+public partial struct IntOrString : ITaggedUnionCases<int, string>
 {
 }
 
@@ -151,7 +151,7 @@ var result = number.Match(
 ```csharp
 [TaggedUnion]
 [TaggedUnionCase(typeof(Failure), paramName: "error")]
-public partial struct Result : ITaggedUnion<Success, Failure>
+public partial struct Result : ITaggedUnionCases<Success, Failure>
 {
 }
 ```

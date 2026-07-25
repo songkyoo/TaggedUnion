@@ -27,7 +27,7 @@ public sealed class IncrementalCachingTests
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnion<int, string>
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
             """,
@@ -36,7 +36,7 @@ public sealed class IncrementalCachingTests
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnion<int, string>
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
             {
                 public static int IgnoredByGenerationModel => 42;
             }
@@ -57,7 +57,7 @@ public sealed class IncrementalCachingTests
 
             [TaggedUnion]
             [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo : ITaggedUnion<int, string>
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
             """,
@@ -67,7 +67,7 @@ public sealed class IncrementalCachingTests
 
             [TaggedUnion]
             [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo : ITaggedUnion<int, string>
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
             {
                 public static int IgnoredByGenerationModel => 42;
             }
@@ -92,7 +92,7 @@ public sealed class IncrementalCachingTests
 
             [TaggedUnion]
             [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo : ITaggedUnion<int, string>
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
             """,
@@ -102,7 +102,7 @@ public sealed class IncrementalCachingTests
 
             [TaggedUnion(GenerateConversionOperators = true)]
             [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo : ITaggedUnion<int, string>
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
             """,
@@ -125,7 +125,7 @@ public sealed class IncrementalCachingTests
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnion<int, string>
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
             """,
@@ -134,7 +134,7 @@ public sealed class IncrementalCachingTests
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnion<long, string>
+            public readonly partial struct Foo : ITaggedUnionCases<long, string>
             {
             }
             """,

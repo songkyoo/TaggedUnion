@@ -16,7 +16,7 @@ public sealed class SourceGenerationTests
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnion<int, string>
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
             """,
@@ -36,7 +36,7 @@ public sealed class SourceGenerationTests
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            public partial struct Foo : ITaggedUnion<int, string>
+            public partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
             """,
@@ -87,7 +87,7 @@ public sealed class SourceGenerationTests
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            public struct Foo : ITaggedUnion<int, string>
+            public struct Foo : ITaggedUnionCases<int, string>
             {
             }
             """,
@@ -136,7 +136,7 @@ public sealed class SourceGenerationTests
             }
 
             [TaggedUnion(GenerateConversionOperators = true)]
-            public readonly partial struct Foo : ITaggedUnion<Qux<int>, string>
+            public readonly partial struct Foo : ITaggedUnionCases<Qux<int>, string>
             {
             }
             """,
@@ -366,7 +366,7 @@ public sealed class SourceGenerationTests
             }
 
             [TaggedUnion(GenerateConversionOperators = true)]
-            public readonly partial struct Foo : ITaggedUnion<Qux, int>
+            public readonly partial struct Foo : ITaggedUnionCases<Qux, int>
             {
             }
             """,
@@ -605,7 +605,7 @@ public sealed class SourceGenerationTests
             }
 
             [TaggedUnion(GenerateConversionOperators = true)]
-            public readonly partial struct Foo : ITaggedUnion<Qux, Bar>
+            public readonly partial struct Foo : ITaggedUnionCases<Qux, Bar>
             {
             }
             """,
@@ -841,7 +841,7 @@ public sealed class SourceGenerationTests
             }
 
             [TaggedUnion(GenerateConversionOperators = true)]
-            public readonly partial struct Foo : ITaggedUnion<Qux, string, int, Bar, Quux, Baz>
+            public readonly partial struct Foo : ITaggedUnionCases<Qux, string, int, Bar, Quux, Baz>
             {
             }
             """,
@@ -1263,7 +1263,7 @@ public sealed class SourceGenerationTests
 
             [TaggedUnion]
             [TaggedUnionCase(typeof(int), tag: 42)]
-            public readonly partial struct Foo : ITaggedUnion<int, string>
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
             """,
@@ -1293,7 +1293,7 @@ public sealed class SourceGenerationTests
 
             [TaggedUnion]
             [TaggedUnionCase(typeof(Qux<int>), "baz")]
-            public readonly partial struct Foo : ITaggedUnion<Qux<int>, string>
+            public readonly partial struct Foo : ITaggedUnionCases<Qux<int>, string>
             {
             }
             """,
@@ -1319,7 +1319,7 @@ public sealed class SourceGenerationTests
             }
 
             [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnion<IQux, string>
+            public readonly partial struct Foo : ITaggedUnionCases<IQux, string>
             {
             }
             """,
@@ -1344,7 +1344,7 @@ public sealed class SourceGenerationTests
             }
 
             [TaggedUnion(GenerateConversionOperators = true)]
-            public readonly partial struct Foo : ITaggedUnion<IQux, string>
+            public readonly partial struct Foo : ITaggedUnionCases<IQux, string>
             {
             }
             """,
@@ -1376,7 +1376,7 @@ public sealed class SourceGenerationTests
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnion<int, string>
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
             """,
@@ -1403,7 +1403,7 @@ public sealed class SourceGenerationTests
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnion<int?[], string>
+            public readonly partial struct Foo : ITaggedUnionCases<int?[], string>
             {
             }
             """,
@@ -1416,7 +1416,7 @@ public sealed class SourceGenerationTests
     }
 
     [Test]
-    public void TaggedUnionInterfaceCanBeDeclaredOnAnotherPartialDeclaration()
+    public void TaggedUnionCasesInterfaceCanBeDeclaredOnAnotherPartialDeclaration()
     {
         AssertGeneratedCodeContains(
             sourceCode:
@@ -1428,7 +1428,7 @@ public sealed class SourceGenerationTests
             {
             }
 
-            public readonly partial struct Foo : ITaggedUnion<int, string>
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
             """,
@@ -1441,7 +1441,7 @@ public sealed class SourceGenerationTests
     }
 
     [Test]
-    public void EightCaseTaggedUnionInterface()
+    public void EightCaseTaggedUnionCasesInterface()
     {
         AssertGeneratedCodeContains(
             sourceCode:
@@ -1459,7 +1459,7 @@ public sealed class SourceGenerationTests
 
             [TaggedUnion]
             public readonly partial struct Foo
-                : ITaggedUnion<C1, C2, C3, C4, C5, C6, C7, C8>
+                : ITaggedUnionCases<C1, C2, C3, C4, C5, C6, C7, C8>
             {
             }
             """,
@@ -1472,7 +1472,7 @@ public sealed class SourceGenerationTests
     }
 
     [Test]
-    public void OfficialUnionSupportIsGeneratedForTaggedUnionInterfaceContract()
+    public void OfficialUnionSupportIsGeneratedForTaggedUnionCasesInterfaceContract()
     {
         var (diagnostics, generatedCodes, _, supportsOfficialUnion) =
             CompileAndGetResults<TaggedUnionGenerator>(
@@ -1497,7 +1497,7 @@ public sealed class SourceGenerationTests
                 namespace Macaron.Union.Tests
                 {
                     [TaggedUnion]
-                    public readonly partial struct Foo : ITaggedUnion<int, string>
+                    public readonly partial struct Foo : ITaggedUnionCases<int, string>
                     {
                     }
                 }

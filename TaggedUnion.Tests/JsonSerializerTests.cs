@@ -75,7 +75,7 @@ public sealed class JsonSerializerTests
             [TaggedUnion]
             [TaggedUnionCase(typeof(string), tag: 42)]
             [TaggedUnionJsonSerializer]
-            public readonly partial struct JsonUnion : ITaggedUnion<int, string>
+            public readonly partial struct JsonUnion : ITaggedUnionCases<int, string>
             {
             }
             """

@@ -18,7 +18,7 @@ public sealed class JsonSerializerSourceGenerationTests
             [TaggedUnion]
             [TaggedUnionCase(typeof(string), tag: 42)]
             [TaggedUnionJsonSerializer]
-            public partial struct Foo : ITaggedUnion<int, string>
+            public partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
             """,

@@ -17,7 +17,7 @@ public sealed class JsonSerializerDiagnosticTests
 
                 [TaggedUnion]
                 [TaggedUnionJsonSerializer]
-                public readonly partial record struct Foo : ITaggedUnion<int, string>
+                public readonly partial record struct Foo : ITaggedUnionCases<int, string>
                 {
                 }
                 """,
@@ -80,7 +80,7 @@ public sealed class JsonSerializerDiagnosticTests
     }
 
     [Test]
-    public void JsonSerializerGeneratorDoesNotReportMissingTaggedUnionInterfaceDiagnostic()
+    public void JsonSerializerGeneratorDoesNotReportMissingTaggedUnionCasesInterfaceDiagnostic()
     {
         var (diagnostics, generatedCodes, _, _) = Helper
             .CompileAndGetResults<TaggedUnionJsonSerializerGenerator>(
