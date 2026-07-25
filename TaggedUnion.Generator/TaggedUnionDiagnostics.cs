@@ -103,6 +103,24 @@ internal static class TaggedUnionDiagnostics
         isEnabledByDefault: true
     );
 
+    public static readonly DiagnosticDescriptor TargetTypeMustImplementTaggedUnionInterfaceRule = new(
+        id: "MTU0012",
+        title: "Target type must implement ITaggedUnion",
+        messageFormat: "Tagged union target type '{0}' must directly implement an ITaggedUnion interface.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
+
+    public static readonly DiagnosticDescriptor TargetTypeCannotImplementMultipleTaggedUnionInterfacesRule = new(
+        id: "MTU0013",
+        title: "Target type cannot implement multiple ITaggedUnion interfaces",
+        messageFormat: "Tagged union target type '{0}' cannot directly implement multiple ITaggedUnion interfaces.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
+
     public static Diagnostic CreateDiagnostic(UnionAnalysisError error)
     {
         return error switch
@@ -119,6 +137,16 @@ internal static class TaggedUnionDiagnostics
             ),
             UnionAnalysisError.TargetTypeCannotDeclareInstanceConstructors value => Diagnostic.Create(
                 descriptor: TargetTypeCannotDeclareInstanceConstructorsRule,
+                location: value.Location,
+                messageArgs: [value.TargetTypeName]
+            ),
+            UnionAnalysisError.TargetTypeMustImplementTaggedUnionInterface value => Diagnostic.Create(
+                descriptor: TargetTypeMustImplementTaggedUnionInterfaceRule,
+                location: value.Location,
+                messageArgs: [value.TargetTypeName]
+            ),
+            UnionAnalysisError.TargetTypeCannotImplementMultipleTaggedUnionInterfaces value => Diagnostic.Create(
+                descriptor: TargetTypeCannotImplementMultipleTaggedUnionInterfacesRule,
                 location: value.Location,
                 messageArgs: [value.TargetTypeName]
             ),

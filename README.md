@@ -4,8 +4,6 @@
 
 ## 패키지 만들기
 
-다음 명령으로 NuGet 패키지를 생성할 수 있습니다.
-
 ```shell
 dotnet pack ./TaggedUnion/TaggedUnion.csproj -c Release
 ```
@@ -14,16 +12,18 @@ dotnet pack ./TaggedUnion/TaggedUnion.csproj -c Release
 
 ## 사용법
 
-유니온으로 사용할 타입을 `readonly partial struct`로 선언하고 `TaggedUnion` 어트리뷰트를 사용하여 포함될 타입을 지정합니다. `TaggedUnion`이 선언되는 타입은 제네릭이 아니어야 하고 인스턴스 생성자를 가질 수 없습니다.
+유니온으로 사용할 타입을 `readonly partial struct`로 선언하고 `TaggedUnion` 어트리뷰트를 적용합니다. 포함될 타입은 `ITaggedUnion<T1, ...>` 인터페이스의 타입 인자로 지정합니다. `TaggedUnion`이 선언되는 타입은 제네릭이 아니어야 하고 인스턴스 생성자를 가질 수 없습니다.
 
 ```csharp
 using Macaron.Union;
 
-[TaggedUnion(typeof(int), typeof(string))]
-public readonly partial struct IntOrString
+[TaggedUnion]
+public readonly partial struct IntOrString : ITaggedUnion<int, string>
 {
 }
 ```
+
+코드 생성은 `TaggedUnion` 어트리뷰트가 적용된 타입만 대상으로 합니다. `ITaggedUnion<T1, ...>`만 구현한 타입은 무시되며, `TaggedUnion` 대상은 2개부터 8개까지의 타입 인자를 가진 `ITaggedUnion<T1, ...>` 인터페이스를 정확히 하나 직접 구현해야 합니다.
 
 위 코드는 다음과 같은 코드를 생성합니다.(세부 구현은 생략됨)
 
@@ -62,7 +62,9 @@ partial struct IntOrString : global::System.IEquatable<IntOrString>
 
 - 타입은 최소 2개, 최대 8개까지 지정할 수 있습니다.
 - 동일한 타입을 지정할 수 없습니다.
-- `void`, `object`, `Nullable<T>`가 아니어야 하며, 제네릭 타입인 경우 완전히 바인딩되어야 합니다.
+- `object`, `Nullable<T>` 타입이 아니어야 하며, 제네릭 타입인 경우 완전히 바인딩되어야 합니다.
+- 참조 타입에 nullable 어노테이션을 사용할 수 없습니다.
+- 배열이나 제네릭 타입 내부의 nullable 타입은 허용됩니다. 예를 들어 `int?[]`와 `List<string?>`는 사용할 수 있습니다.
 
 ### 유니온 인스턴스 생성하기
 
@@ -75,14 +77,11 @@ IntOrString text = new("hello");
 
 ### 캐스팅 연산자 생성하기
 
-어트리뷰트에 `GenerateConversionOperators`를 `true`로 지정하면 각 타입에서 유니온 타입으로의 암시적 캐스팅과 유니온 타입에서 각 타입으로의 명시적 캐스팅을 생성합니다.
+`TaggedUnion` 어트리뷰트의 `GenerateConversionOperators`를 `true`로 지정하면 각 타입에서 유니온 타입으로의 암시적 캐스팅과 유니온 타입에서 각 타입으로의 명시적 캐스팅을 생성합니다.
 
 ```csharp
-[TaggedUnion(
-    typeof(int),
-    typeof(string),
-    GenerateConversionOperators = true)]
-public readonly partial struct IntOrString
+[TaggedUnion(GenerateConversionOperators = true)]
+public readonly partial struct IntOrString : ITaggedUnion<int, string>
 {
 }
 
@@ -150,9 +149,9 @@ var result = number.Match(
 지정된 타입의 이름이 동일한 경우 코드 생성이 실패하며 `TaggedUnionCase` 어트리뷰트를 사용하여 이름을 직접 지정해야 합니다. `TaggedUnionCase`는 이름이 충돌하지 않는 경우에도 사용할 수 있습니다.
 
 ```csharp
-[TaggedUnion(typeof(Success), typeof(Failure))]
+[TaggedUnion]
 [TaggedUnionCase(typeof(Failure), paramName: "error")]
-public readonly partial struct Result
+public readonly partial struct Result : ITaggedUnion<Success, Failure>
 {
 }
 ```

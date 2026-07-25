@@ -1,4 +1,4 @@
-﻿using static Macaron.Union.Tests.Helper;
+using static Macaron.Union.Tests.Helper;
 
 namespace Macaron.Union.Tests;
 
@@ -13,8 +13,8 @@ public sealed class SourceGenerationTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
-            public readonly partial struct Foo
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -37,8 +37,8 @@ public sealed class SourceGenerationTests
             {
             }
 
-            [TaggedUnion(typeof(Qux<int>), typeof(string), GenerateConversionOperators = true)]
-            public readonly partial struct Foo
+            [TaggedUnion(GenerateConversionOperators = true)]
+            public readonly partial struct Foo : ITaggedUnion<Qux<int>, string>
             {
             }
             """,
@@ -267,8 +267,8 @@ public sealed class SourceGenerationTests
                 public readonly int Value;
             }
 
-            [TaggedUnion(typeof(Qux), typeof(int), GenerateConversionOperators = true)]
-            public readonly partial struct Foo
+            [TaggedUnion(GenerateConversionOperators = true)]
+            public readonly partial struct Foo : ITaggedUnion<Qux, int>
             {
             }
             """,
@@ -506,8 +506,8 @@ public sealed class SourceGenerationTests
                 public readonly Baz Value;
             }
 
-            [TaggedUnion(typeof(Qux), typeof(Bar), GenerateConversionOperators = true)]
-            public readonly partial struct Foo
+            [TaggedUnion(GenerateConversionOperators = true)]
+            public readonly partial struct Foo : ITaggedUnion<Qux, Bar>
             {
             }
             """,
@@ -742,8 +742,8 @@ public sealed class SourceGenerationTests
                 public readonly string Value;
             }
 
-            [TaggedUnion(typeof(Qux), typeof(string), typeof(int), typeof(Bar), typeof(Quux), typeof(Baz), GenerateConversionOperators = true)]
-            public readonly partial struct Foo
+            [TaggedUnion(GenerateConversionOperators = true)]
+            public readonly partial struct Foo : ITaggedUnion<Qux, string, int, Bar, Quux, Baz>
             {
             }
             """,
@@ -1163,9 +1163,9 @@ public sealed class SourceGenerationTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(int), tag: 42)]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -1193,9 +1193,9 @@ public sealed class SourceGenerationTests
             {
             }
 
-            [TaggedUnion(typeof(Qux<int>), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(Qux<int>), "baz")]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<Qux<int>, string>
             {
             }
             """,
@@ -1220,8 +1220,8 @@ public sealed class SourceGenerationTests
             {
             }
 
-            [TaggedUnion(typeof(IQux), typeof(string))]
-            public readonly partial struct Foo
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<IQux, string>
             {
             }
             """,
@@ -1245,8 +1245,8 @@ public sealed class SourceGenerationTests
             {
             }
 
-            [TaggedUnion(typeof(IQux), typeof(string), GenerateConversionOperators = true)]
-            public readonly partial struct Foo
+            [TaggedUnion(GenerateConversionOperators = true)]
+            public readonly partial struct Foo : ITaggedUnion<IQux, string>
             {
             }
             """,
@@ -1277,8 +1277,8 @@ public sealed class SourceGenerationTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
-            public readonly partial struct Foo
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -1304,8 +1304,8 @@ public sealed class SourceGenerationTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int?[]), typeof(string))]
-            public readonly partial struct Foo
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<int?[], string>
             {
             }
             """,
@@ -1315,5 +1315,116 @@ public sealed class SourceGenerationTests
                 "global::System.Func<int?[], TResult> intArray"
             ]
         );
+    }
+
+    [Test]
+    public void TaggedUnionInterfaceCanBeDeclaredOnAnotherPartialDeclaration()
+    {
+        AssertGeneratedCodeContains(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public readonly partial struct Foo
+            {
+            }
+
+            public readonly partial struct Foo : ITaggedUnion<int, string>
+            {
+            }
+            """,
+            expectedFragments:
+            [
+                "public Foo(int value)",
+                "public Foo(string value)"
+            ]
+        );
+    }
+
+    [Test]
+    public void EightCaseTaggedUnionInterface()
+    {
+        AssertGeneratedCodeContains(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public sealed class C1 { }
+            public sealed class C2 { }
+            public sealed class C3 { }
+            public sealed class C4 { }
+            public sealed class C5 { }
+            public sealed class C6 { }
+            public sealed class C7 { }
+            public sealed class C8 { }
+
+            [TaggedUnion]
+            public readonly partial struct Foo
+                : ITaggedUnion<C1, C2, C3, C4, C5, C6, C7, C8>
+            {
+            }
+            """,
+            expectedFragments:
+            [
+                "public Foo(global::Macaron.Union.Tests.C1 value)",
+                "public Foo(global::Macaron.Union.Tests.C8 value)"
+            ]
+        );
+    }
+
+    [Test]
+    public void OfficialUnionSupportIsGeneratedForTaggedUnionInterfaceContract()
+    {
+        var (diagnostics, generatedCodes, _, supportsOfficialUnion) =
+            CompileAndGetResults<TaggedUnionGenerator>(
+                sourceCode:
+                """
+                #nullable enable
+
+                namespace System.Runtime.CompilerServices
+                {
+                    [global::System.AttributeUsage(
+                        global::System.AttributeTargets.Class | global::System.AttributeTargets.Struct)]
+                    public sealed class UnionAttribute : global::System.Attribute
+                    {
+                    }
+
+                    public interface IUnion
+                    {
+                        object? Value { get; }
+                    }
+                }
+
+                namespace Macaron.Union.Tests
+                {
+                    [TaggedUnion]
+                    public readonly partial struct Foo : ITaggedUnion<int, string>
+                    {
+                    }
+                }
+                """,
+                additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+            );
+        var generatedCode = generatedCodes.Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                diagnostics.Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error),
+                Is.Empty
+            );
+            Assert.That(supportsOfficialUnion, Is.True);
+            Assert.That(
+                generatedCode,
+                Does.Contain("[global::System.Runtime.CompilerServices.Union]")
+            );
+            Assert.That(
+                generatedCode,
+                Does.Contain(
+                    "partial struct Foo : global::System.IEquatable<Foo>, global::System.Runtime.CompilerServices.IUnion"
+                )
+            );
+        });
     }
 }

@@ -15,10 +15,10 @@ public sealed class JsonSerializerSourceGenerationTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(string), tag: 42)]
             [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,

@@ -20,14 +20,14 @@ public sealed class IncrementalCachingTests
     [Test]
     public void TaggedUnionGeneratorCachesSourceOutputWhenModelIsUnchanged()
     {
-        AssertSourceOutputIsCached(
+        AssertSourceOutputRunReasons(
             generator: new TaggedUnionGenerator(),
             sourceCode:
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
-            public readonly partial struct Foo
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -35,8 +35,8 @@ public sealed class IncrementalCachingTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
-            public readonly partial struct Foo
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
                 public static int IgnoredByGenerationModel => 42;
             }
@@ -49,15 +49,15 @@ public sealed class IncrementalCachingTests
     [Test]
     public void TaggedUnionJsonSerializerGeneratorCachesSourceOutputWhenModelIsUnchanged()
     {
-        AssertSourceOutputIsCached(
+        AssertSourceOutputRunReasons(
             generator: new TaggedUnionJsonSerializerGenerator(),
             sourceCode:
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -65,9 +65,9 @@ public sealed class IncrementalCachingTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
                 public static int IgnoredByGenerationModel => 42;
             }
@@ -84,15 +84,15 @@ public sealed class IncrementalCachingTests
     [Test]
     public void TaggedUnionJsonSerializerGeneratorCachesSourceOutputWhenConversionOperatorPolicyChanges()
     {
-        AssertSourceOutputIsCached(
+        AssertSourceOutputRunReasons(
             generator: new TaggedUnionJsonSerializerGenerator(),
             sourceCode:
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -100,9 +100,9 @@ public sealed class IncrementalCachingTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string), GenerateConversionOperators = true)]
+            [TaggedUnion(GenerateConversionOperators = true)]
             [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -114,15 +114,45 @@ public sealed class IncrementalCachingTests
             ]
         );
     }
+
+    [Test]
+    public void TaggedUnionGeneratorUpdatesSourceOutputWhenInterfaceCaseTypeChanges()
+    {
+        AssertSourceOutputRunReasons(
+            generator: new TaggedUnionGenerator(),
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<int, string>
+            {
+            }
+            """,
+            updatedSourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<long, string>
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
+            assertOfficialUnionSupportCaching: true,
+            expectModelChange: true
+        );
+    }
     #endregion
 
     #region Static Methods
-    private static void AssertSourceOutputIsCached(
+    private static void AssertSourceOutputRunReasons(
         IIncrementalGenerator generator,
         string sourceCode,
         string updatedSourceCode,
         Assembly[] additionalAssemblies,
-        bool assertOfficialUnionSupportCaching = false
+        bool assertOfficialUnionSupportCaching = false,
+        bool expectModelChange = false
     )
     {
         var (compilation, driver) = Helper.CreateCompilationAndDriver(
@@ -164,8 +194,24 @@ public sealed class IncrementalCachingTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(analysisResultReasons, Is.EqualTo(new[] { IncrementalStepRunReason.Unchanged }));
-            Assert.That(modelReasons, Is.EqualTo(new[] { IncrementalStepRunReason.Cached }));
+            Assert.That(
+                analysisResultReasons,
+                Is.EqualTo(new[]
+                {
+                    expectModelChange
+                        ? IncrementalStepRunReason.Modified
+                        : IncrementalStepRunReason.Unchanged,
+                })
+            );
+            Assert.That(
+                modelReasons,
+                Is.EqualTo(new[]
+                {
+                    expectModelChange
+                        ? IncrementalStepRunReason.Modified
+                        : IncrementalStepRunReason.Cached,
+                })
+            );
 
             if (assertOfficialUnionSupportCaching)
             {
@@ -175,12 +221,28 @@ public sealed class IncrementalCachingTests
                 );
                 Assert.That(
                     sourceGenerationModelReasons,
-                    Is.EqualTo(new[] { IncrementalStepRunReason.Cached })
+                    Is.EqualTo(new[]
+                    {
+                        expectModelChange
+                            ? IncrementalStepRunReason.Modified
+                            : IncrementalStepRunReason.Cached,
+                    })
                 );
             }
 
-            Assert.That(outputReasons, Does.Contain(IncrementalStepRunReason.Cached));
-            Assert.That(outputReasons, Does.Not.Contain(IncrementalStepRunReason.Modified));
+            if (expectModelChange)
+            {
+                Assert.That(
+                    outputReasons,
+                    Does.Contain(IncrementalStepRunReason.Modified)
+                        .Or.Contain(IncrementalStepRunReason.New)
+                );
+            }
+            else
+            {
+                Assert.That(outputReasons, Does.Contain(IncrementalStepRunReason.Cached));
+                Assert.That(outputReasons, Does.Not.Contain(IncrementalStepRunReason.Modified));
+            }
         });
     }
 

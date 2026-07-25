@@ -72,10 +72,10 @@ public sealed class JsonSerializerTests
             """
             namespace Macaron.Union.JsonSerializer.Tests.Generated;
 
-            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(string), tag: 42)]
             [TaggedUnionJsonSerializer]
-            public readonly partial struct JsonUnion
+            public readonly partial struct JsonUnion : ITaggedUnion<int, string>
             {
             }
             """

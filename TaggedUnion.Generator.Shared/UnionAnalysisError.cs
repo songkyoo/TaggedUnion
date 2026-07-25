@@ -19,6 +19,16 @@ internal abstract record UnionAnalysisError(Location Location)
         string TargetTypeName
     ) : UnionAnalysisError(Location);
 
+    public sealed record TargetTypeMustImplementTaggedUnionInterface(
+        Location Location,
+        string TargetTypeName
+    ) : UnionAnalysisError(Location);
+
+    public sealed record TargetTypeCannotImplementMultipleTaggedUnionInterfaces(
+        Location Location,
+        string TargetTypeName
+    ) : UnionAnalysisError(Location);
+
     public sealed record UnsupportedCaseType(
         Location Location,
         string CaseTypeName,

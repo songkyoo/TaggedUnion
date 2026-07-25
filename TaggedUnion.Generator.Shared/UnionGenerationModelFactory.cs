@@ -17,6 +17,12 @@ namespace Macaron.Union;
 internal static class UnionGenerationModelFactory
 {
     #region Types
+    private sealed record TaggedUnionInterfaceContext(
+        INamedTypeSymbol TypeSymbol,
+        Location Location,
+        ImmutableArray<Location> TypeArgumentLocations
+    );
+
     private sealed record TaggedUnionCaseAttributeContext(
         ITypeSymbol TypeSymbol,
         Location TypeLocation,
@@ -35,21 +41,44 @@ internal static class UnionGenerationModelFactory
         CancellationToken cancellationToken
     )
     {
-        if (!TryGetUnionCaseCandidates(taggedUnionAttribute, cancellationToken, out var caseCandidates))
-        {
-            return new AnalysisResult.Failure(ImmutableArray<UnionAnalysisError>.Empty);
-        }
-
         var structDeclarationSyntax = (StructDeclarationSyntax)context.TargetNode;
-        var targetTypeSymbol = context.SemanticModel.GetDeclaredSymbol(
-            structDeclarationSyntax,
-            cancellationToken
-        );
+        var targetTypeSymbol = context.TargetSymbol as INamedTypeSymbol;
 
         if (targetTypeSymbol == null)
         {
-            return new AnalysisResult.Failure(ImmutableArray<UnionAnalysisError>.Empty);
+            return AnalysisResult.Failure.Empty;
         }
+
+        var taggedUnionInterfaces = GetTaggedUnionInterfaceContexts(
+            targetTypeSymbol,
+            context.SemanticModel.Compilation,
+            cancellationToken
+        );
+
+        if (taggedUnionInterfaces.Length == 0)
+        {
+            return new AnalysisResult.Failure(
+                new UnionAnalysisError.TargetTypeMustImplementTaggedUnionInterface(
+                    Location: taggedUnionAttribute.ApplicationSyntaxReference
+                        ?.GetSyntax(cancellationToken)
+                        .GetLocation()
+                        ?? structDeclarationSyntax.GetLocation(),
+                    TargetTypeName: structDeclarationSyntax.Identifier.ToString()
+                )
+            );
+        }
+
+        if (taggedUnionInterfaces.Length > 1)
+        {
+            return new AnalysisResult.Failure(
+                new UnionAnalysisError.TargetTypeCannotImplementMultipleTaggedUnionInterfaces(
+                    Location: taggedUnionInterfaces[1].Location,
+                    TargetTypeName: structDeclarationSyntax.Identifier.ToString()
+                )
+            );
+        }
+
+        var caseCandidates = CreateUnionCaseCandidates(taggedUnionInterfaces[0]);
 
         if (!TryGetCaseAttributeContexts(
             attributes: context
@@ -60,7 +89,7 @@ internal static class UnionGenerationModelFactory
             out var caseAttributes
         ))
         {
-            return new AnalysisResult.Failure(ImmutableArray<UnionAnalysisError>.Empty);
+            return AnalysisResult.Failure.Empty;
         }
 
         var errorsBuilder = ImmutableArray.CreateBuilder<UnionAnalysisError>();
@@ -121,17 +150,16 @@ internal static class UnionGenerationModelFactory
             casesBuilder.Add(caseModel);
         }
 
-        var typeSymbol = (INamedTypeSymbol)context.TargetSymbol;
         var model = new UnionGenerationModel(
-            Namespace: !typeSymbol.ContainingNamespace.IsGlobalNamespace
-                ? typeSymbol.ContainingNamespace.ToDisplayString()
+            Namespace: !targetTypeSymbol.ContainingNamespace.IsGlobalNamespace
+                ? targetTypeSymbol.ContainingNamespace.ToDisplayString()
                 : "",
-            ContainingTypes: GetContainingTypes(typeSymbol)
+            ContainingTypes: GetContainingTypes(targetTypeSymbol)
                 .Select(GetPartialTypeDeclarationString)
                 .ToImmutableArray(),
-            TypeName: typeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+            TypeName: targetTypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
             Cases: casesBuilder.ToImmutable(),
-            HintName: GetTypeHintName(typeSymbol)
+            HintName: GetTypeHintName(targetTypeSymbol)
         );
 
         return new AnalysisResult.Success(model);
@@ -339,46 +367,140 @@ internal static class UnionGenerationModelFactory
         #endregion
     }
 
-    private static bool TryGetUnionCaseCandidates(
-        AttributeData attribute,
-        CancellationToken cancellationToken,
-        out ImmutableArray<UnionCaseCandidateContext> candidateContexts
+    private static ImmutableArray<UnionCaseCandidateContext> CreateUnionCaseCandidates(
+        TaggedUnionInterfaceContext taggedUnionInterface
     )
     {
-        var builder = ImmutableArray.CreateBuilder<UnionCaseCandidateContext>(attribute.ConstructorArguments.Length);
-        var attributeSyntax = (AttributeSyntax)attribute.ApplicationSyntaxReference?.GetSyntax(cancellationToken)!;
-        var constructorArguments = attribute.ConstructorArguments;
+        var typeArguments = taggedUnionInterface.TypeSymbol.TypeArguments;
+        var builder = ImmutableArray.CreateBuilder<UnionCaseCandidateContext>(typeArguments.Length);
 
-        for (var i = 0; i < constructorArguments.Length; i++)
+        for (var i = 0; i < typeArguments.Length; i++)
         {
-            var typedConstant = constructorArguments[i];
-
-            if (typedConstant.Kind != TypedConstantKind.Type
-                || typedConstant.Value is not ITypeSymbol typeSymbol
-                || typeSymbol is IErrorTypeSymbol
-            )
-            {
-                candidateContexts = default;
-
-                return false;
-            }
+            var typeSymbol = typeArguments[i];
+            var typeLocation = taggedUnionInterface.TypeArgumentLocations[i];
 
             builder.Add(new UnionCaseCandidateContext(
-                ArgumentSyntax: attributeSyntax.ArgumentList!.Arguments[i],
+                TypeLocation: typeLocation,
                 TypeSymbol: typeSymbol,
                 ParamName: GetCaseParamName(typeSymbol),
-                ParamNameLocation: attributeSyntax.ArgumentList!.Arguments[i].GetLocation(),
+                ParamNameLocation: typeLocation,
                 IsParamNameExplicit: false,
                 IsParamNameValid: true,
                 Tag: (byte)(i + 1),
-                TagLocation: attributeSyntax.ArgumentList!.Arguments[i].GetLocation(),
+                TagLocation: typeLocation,
                 IsTagExplicit: false
             ));
         }
 
-        candidateContexts = builder.ToImmutable();
+        return builder.ToImmutable();
+    }
 
-        return true;
+    private static ImmutableArray<TaggedUnionInterfaceContext> GetTaggedUnionInterfaceContexts(
+        INamedTypeSymbol targetTypeSymbol,
+        Compilation compilation,
+        CancellationToken cancellationToken
+    )
+    {
+        var interfaceDefinitions = Enumerable
+            .Range(2, 7)
+            .Select(arity => compilation.GetTypeByMetadataName(
+                $"{TaggedUnionMetadataNames.TaggedUnionInterface}`{arity}"
+            ))
+            .Where(static symbol => symbol != null)
+            .Select(static symbol => symbol!)
+            .ToImmutableHashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        var builder = ImmutableArray.CreateBuilder<TaggedUnionInterfaceContext>();
+
+        foreach (var interfaceSymbol in targetTypeSymbol.Interfaces)
+        {
+            if (!interfaceDefinitions.Contains(interfaceSymbol.OriginalDefinition))
+            {
+                continue;
+            }
+
+            var interfaceSyntax = FindInterfaceSyntax(
+                targetTypeSymbol,
+                interfaceSymbol,
+                compilation,
+                cancellationToken
+            );
+            var location = interfaceSyntax?.GetLocation() ?? targetTypeSymbol.Locations.FirstOrDefault() ?? Location.None;
+            var typeArgumentLocations = GetTypeArgumentLocations(
+                interfaceSyntax,
+                interfaceSymbol.Arity,
+                location
+            );
+
+            builder.Add(new TaggedUnionInterfaceContext(
+                TypeSymbol: interfaceSymbol,
+                Location: location,
+                TypeArgumentLocations: typeArgumentLocations
+            ));
+        }
+
+        return builder.ToImmutable();
+
+        #region Local Functions
+        static BaseTypeSyntax? FindInterfaceSyntax(
+            INamedTypeSymbol targetTypeSymbol,
+            INamedTypeSymbol interfaceSymbol,
+            Compilation compilation,
+            CancellationToken cancellationToken
+        )
+        {
+            foreach (var syntaxReference in targetTypeSymbol.DeclaringSyntaxReferences)
+            {
+                if (syntaxReference.GetSyntax(cancellationToken) is not StructDeclarationSyntax
+                {
+                    BaseList: { } baseList,
+                })
+                {
+                    continue;
+                }
+
+                var semanticModel = compilation.GetSemanticModel(baseList.SyntaxTree);
+
+                foreach (var baseType in baseList.Types)
+                {
+                    var baseTypeSymbol = semanticModel.GetTypeInfo(baseType.Type, cancellationToken).Type;
+
+                    if (SymbolEqualityComparer.Default.Equals(baseTypeSymbol, interfaceSymbol))
+                    {
+                        return baseType;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        static ImmutableArray<Location> GetTypeArgumentLocations(
+            BaseTypeSyntax? interfaceSyntax,
+            int arity,
+            Location fallbackLocation
+        )
+        {
+            var genericName = interfaceSyntax?
+                .Type
+                .DescendantNodesAndSelf()
+                .OfType<GenericNameSyntax>()
+                .LastOrDefault(node =>
+                    node.Identifier.ValueText == "ITaggedUnion"
+                    && node.TypeArgumentList.Arguments.Count == arity
+                );
+
+            if (genericName == null)
+            {
+                return Enumerable.Repeat(fallbackLocation, arity).ToImmutableArray();
+            }
+
+            return genericName
+                .TypeArgumentList
+                .Arguments
+                .Select(static argument => argument.GetLocation())
+                .ToImmutableArray();
+        }
+        #endregion
     }
 
     private static bool ValidateTargetTypeDeclaration(
@@ -515,7 +637,7 @@ internal static class UnionGenerationModelFactory
         foreach (var candidate in unsupportedCaseTypes)
         {
             errorsBuilder.Add(new UnionAnalysisError.UnsupportedCaseType(
-                Location: candidate.ArgumentSyntax.GetLocation(),
+                Location: candidate.TypeLocation,
                 CaseTypeName: candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
                 TargetTypeName: structDeclarationSyntax.Identifier.ToString()
             ));
@@ -524,7 +646,7 @@ internal static class UnionGenerationModelFactory
         foreach (var candidate in duplicateCaseTypes)
         {
             errorsBuilder.Add(new UnionAnalysisError.DuplicateCaseType(
-                Location: candidate.ArgumentSyntax.GetLocation(),
+                Location: candidate.TypeLocation,
                 CaseTypeName: candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
                 TargetTypeName: structDeclarationSyntax.Identifier.ToString()
             ));
@@ -558,6 +680,11 @@ internal static class UnionGenerationModelFactory
         #region Local Functions
         static bool IsSupportedCaseType(ITypeSymbol typeSymbol)
         {
+            if (typeSymbol.NullableAnnotation == NullableAnnotation.Annotated)
+            {
+                return false;
+            }
+
             return typeSymbol switch
             {
                 INamedTypeSymbol namedTypeSymbol => namedTypeSymbol is

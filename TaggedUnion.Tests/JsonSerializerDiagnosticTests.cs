@@ -15,9 +15,9 @@ public sealed class JsonSerializerDiagnosticTests
                 """
                 namespace Macaron.Union.Tests;
 
-                [TaggedUnion(typeof(int), typeof(string))]
+                [TaggedUnion]
                 [TaggedUnionJsonSerializer]
-                public partial struct Foo
+                public partial struct Foo : ITaggedUnion<int, string>
                 {
                 }
                 """,
@@ -75,6 +75,39 @@ public sealed class JsonSerializerDiagnosticTests
                 diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan),
                 Is.EqualTo("TaggedUnionJsonSerializer")
             );
+            Assert.That(generatedCodes, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void JsonSerializerGeneratorDoesNotReportMissingTaggedUnionInterfaceDiagnostic()
+    {
+        var (diagnostics, generatedCodes, _, _) = Helper
+            .CompileAndGetResults<TaggedUnionJsonSerializerGenerator>(
+                sourceCode:
+                """
+                namespace Macaron.Union.Tests;
+
+                [TaggedUnion]
+                [TaggedUnionJsonSerializer]
+                public readonly partial struct Foo
+                {
+                }
+                """,
+                additionalAssemblies:
+                [
+                    typeof(TaggedUnionAttribute).Assembly,
+                    typeof(TaggedUnionJsonSerializerAttribute).Assembly,
+                    typeof(JsonSerializer).Assembly,
+                ]
+            );
+        var errorDiagnostics = diagnostics
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(errorDiagnostics, Is.Empty);
             Assert.That(generatedCodes, Is.Empty);
         });
     }

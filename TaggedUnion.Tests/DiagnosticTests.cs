@@ -1,4 +1,4 @@
-﻿using static Macaron.Union.Tests.Helper;
+using static Macaron.Union.Tests.Helper;
 
 namespace Macaron.Union.Tests;
 
@@ -13,8 +13,8 @@ public sealed class DiagnosticTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
-            public partial struct Foo
+            [TaggedUnion]
+            public partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -30,8 +30,8 @@ public sealed class DiagnosticTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
-            public readonly partial struct Foo<T>
+            [TaggedUnion]
+            public readonly partial struct Foo<T> : ITaggedUnion<int, string>
             {
             }
             """,
@@ -47,8 +47,8 @@ public sealed class DiagnosticTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
-            public readonly partial struct Foo
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
                 public Foo()
                 {
@@ -62,17 +62,22 @@ public sealed class DiagnosticTests
     [Test]
     public void VoidCaseType()
     {
-        AssertDiagnostic(
+        AssertDiagnostics(
             sourceCode:
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(void), typeof(string))]
-            public readonly partial struct Foo
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<void, string>
             {
             }
             """,
-            expectedDiagnosticId: "MTU0004"
+            expectedDiagnosticIds:
+            [
+                "CS0306",
+                "CS1547",
+                "MTU0004",
+            ]
         );
     }
 
@@ -84,8 +89,8 @@ public sealed class DiagnosticTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(object), typeof(string))]
-            public readonly partial struct Foo
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<object, string>
             {
             }
             """,
@@ -101,13 +106,83 @@ public sealed class DiagnosticTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int?), typeof(string))]
-            public readonly partial struct Foo
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<int?, string>
             {
             }
             """,
             expectedDiagnosticId: "MTU0004"
         );
+    }
+
+    [Test]
+    public void NullableReferenceCaseType()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            #nullable enable
+
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<string?, int>
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0004",
+            expectedLocationText: "string?"
+        );
+    }
+
+    [Test]
+    public void NullableReferenceArrayCaseType()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            #nullable enable
+
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<int[]?, string>
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0004",
+            expectedLocationText: "int[]?"
+        );
+    }
+
+    [Test]
+    public void NestedNullableTypesAreSupported()
+    {
+        var (diagnostics, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
+            sourceCode:
+            """
+            #nullable enable
+
+            using System.Collections.Generic;
+
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<int?[], List<string?>>
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                diagnostics.Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error),
+                Is.Empty
+            );
+            Assert.That(generatedCodes, Has.Length.EqualTo(1));
+        });
     }
 
     [Test]
@@ -120,19 +195,19 @@ public sealed class DiagnosticTests
 
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(List<>), typeof(string))]
-            public readonly partial struct Foo
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<List<>, string>
             {
             }
             """,
-            expectedDiagnosticId: "MTU0004"
+            expectedDiagnosticId: "CS7003"
         );
     }
 
     [Test]
     public void RefLikeCaseType()
     {
-        AssertDiagnostic(
+        AssertDiagnostics(
             sourceCode:
             """
             using System.Collections.Generic;
@@ -143,12 +218,16 @@ public sealed class DiagnosticTests
             {
             }
 
-            [TaggedUnion(typeof(Qux), typeof(string))]
-            public readonly partial struct Foo
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<Qux, string>
             {
             }
             """,
-            expectedDiagnosticId: "MTU0004"
+            expectedDiagnosticIds:
+            [
+                "CS0306",
+                "MTU0004",
+            ]
         );
     }
 
@@ -160,8 +239,8 @@ public sealed class DiagnosticTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(string), typeof(string))]
-            public readonly partial struct Foo
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnion<string, string>
             {
             }
             """,
@@ -191,8 +270,8 @@ public sealed class DiagnosticTests
 
             namespace Macaron.Union.Tests
             {
-                [TaggedUnion(typeof(Left.Qux), typeof(Right.Qux))]
-                public readonly partial struct Foo
+                [TaggedUnion]
+                public readonly partial struct Foo : ITaggedUnion<Left.Qux, Right.Qux>
                 {
                 }
             }
@@ -213,9 +292,9 @@ public sealed class DiagnosticTests
             {
             }
 
-            [TaggedUnion(typeof(Qux), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(Qux), "string")]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<Qux, string>
             {
             }
             """,
@@ -246,10 +325,10 @@ public sealed class DiagnosticTests
 
             namespace Macaron.Union.Tests
             {
-                [TaggedUnion(typeof(Left.Qux), typeof(Right.Bar))]
+                [TaggedUnion]
                 [TaggedUnionCase(typeof(Left.Qux), "value")]
                 [TaggedUnionCase(typeof(Right.Bar), @"value")]
-                public readonly partial struct Foo
+                public readonly partial struct Foo : ITaggedUnion<Left.Qux, Right.Bar>
                 {
                 }
             }
@@ -271,9 +350,9 @@ public sealed class DiagnosticTests
             {
             }
 
-            [TaggedUnion(typeof(Qux), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(Qux), "bad-name")]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<Qux, string>
             {
             }
             """,
@@ -298,9 +377,9 @@ public sealed class DiagnosticTests
             {
             }
 
-            [TaggedUnion(typeof(Qux), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(Baz), "baz")]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<Qux, string>
             {
             }
             """,
@@ -325,9 +404,9 @@ public sealed class DiagnosticTests
             {
             }
 
-            [TaggedUnion(typeof(Qux), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(Baz))]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<Qux, string>
             {
             }
             """,
@@ -355,6 +434,90 @@ public sealed class DiagnosticTests
     }
 
     [Test]
+    public void TaggedUnionAttributeWithoutTaggedUnionInterface()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public readonly partial struct Foo
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0012",
+            expectedLocationText: "TaggedUnion"
+        );
+    }
+
+    [Test]
+    public void MultipleTaggedUnionInterfaces()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public readonly partial struct Foo
+                : ITaggedUnion<int, string>, ITaggedUnion<long, bool>
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0013",
+            expectedLocationText: "ITaggedUnion<long, bool>"
+        );
+    }
+
+    [Test]
+    public void IndirectTaggedUnionInterfaceImplementation()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public interface IFooUnion : ITaggedUnion<int, string>
+            {
+            }
+
+            [TaggedUnion]
+            public readonly partial struct Foo : IFooUnion
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0012",
+            expectedLocationText: "TaggedUnion"
+        );
+    }
+
+    [Test]
+    public void TaggedUnionInterfaceWithoutTaggedUnionAttributeIsIgnored()
+    {
+        var (diagnostics, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public readonly partial struct Foo : ITaggedUnion<int, string>
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                diagnostics.Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error),
+                Is.Empty
+            );
+            Assert.That(generatedCodes, Is.Empty);
+        });
+    }
+
+    [Test]
     public void UnresolvedCaseAttributeType()
     {
         AssertDiagnostic(
@@ -366,9 +529,9 @@ public sealed class DiagnosticTests
             {
             }
 
-            [TaggedUnion(typeof(Qux), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(Missing), "missing")]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<Qux, string>
             {
             }
             """,
@@ -384,9 +547,9 @@ public sealed class DiagnosticTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(int), tag: 0)]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -403,9 +566,9 @@ public sealed class DiagnosticTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(int), tag: -1)]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -421,9 +584,9 @@ public sealed class DiagnosticTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(int), tag: 256)]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -439,10 +602,10 @@ public sealed class DiagnosticTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(int), tag: 42)]
             [TaggedUnionCase(typeof(string), tag: 0x2A)]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -459,9 +622,9 @@ public sealed class DiagnosticTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(int), tag: 2)]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -478,9 +641,9 @@ public sealed class DiagnosticTests
             """
             namespace Macaron.Union.Tests;
 
-            [TaggedUnion(typeof(int), typeof(string))]
+            [TaggedUnion]
             [TaggedUnionCase(typeof(string), tag: 0x01)]
-            public readonly partial struct Foo
+            public readonly partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -511,14 +674,16 @@ public sealed class DiagnosticTests
 
             namespace Macaron.Union.Tests
             {
-                [TaggedUnion(typeof(void), typeof(string), typeof(string), typeof(Left.Qux), typeof(Right.Qux))]
-                public readonly partial struct Foo
+                [TaggedUnion]
+                public readonly partial struct Foo : ITaggedUnion<void, string, string, Left.Qux, Right.Qux>
                 {
                 }
             }
             """,
             expectedDiagnosticIds:
             [
+                "CS0306",
+                "CS1547",
                 "MTU0004",
                 "MTU0005",
                 "MTU0006",
