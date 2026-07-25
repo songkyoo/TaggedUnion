@@ -225,7 +225,7 @@ public sealed class DiagnosticTests
             """,
             expectedDiagnosticIds:
             [
-                "CS0306",
+                "CS9244",
                 "MTU0004",
             ]
         );
