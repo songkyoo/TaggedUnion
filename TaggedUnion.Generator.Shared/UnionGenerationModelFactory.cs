@@ -16,12 +16,6 @@ namespace Macaron.Union;
 
 internal static class UnionGenerationModelFactory
 {
-    #region Constants
-    private const string AttributeString = "System.Attribute";
-    private const string UnionAttributeString = "System.Runtime.CompilerServices.UnionAttribute";
-    private const string UnionInterfaceString = "System.Runtime.CompilerServices.IUnion";
-    #endregion
-
     #region Types
     private sealed record TaggedUnionCaseAttributeContext(
         ITypeSymbol TypeSymbol,
@@ -136,7 +130,6 @@ internal static class UnionGenerationModelFactory
 
         var typeSymbol = (INamedTypeSymbol)context.TargetSymbol;
         var model = new UnionGenerationModel(
-            SupportsOfficialUnion: SupportsOfficialUnion(context.SemanticModel.Compilation),
             Namespace: !typeSymbol.ContainingNamespace.IsGlobalNamespace
                 ? typeSymbol.ContainingNamespace.ToDisplayString()
                 : "",
@@ -210,59 +203,6 @@ internal static class UnionGenerationModelFactory
             return builder.ToImmutable();
         }
 
-        #endregion
-    }
-
-    private static bool SupportsOfficialUnion(Compilation compilation)
-    {
-        var unionAttributeSymbol = compilation.GetTypeByMetadataName(UnionAttributeString);
-        var unionInterfaceSymbol = compilation.GetTypeByMetadataName(UnionInterfaceString);
-
-        return IsUnionAttribute(unionAttributeSymbol, compilation)
-            && IsUnionInterface(unionInterfaceSymbol, compilation);
-
-        #region Local Functions
-        static bool IsUnionAttribute(INamedTypeSymbol? symbol, Compilation compilation)
-        {
-            if (symbol is not { TypeKind: Class, Arity: 0 })
-            {
-                return false;
-            }
-
-            var attributeSymbol = compilation.GetTypeByMetadataName(AttributeString);
-            var currentSymbol = symbol;
-
-            while (currentSymbol != null)
-            {
-                if (SymbolEqualityComparer.Default.Equals(currentSymbol, attributeSymbol))
-                {
-                    return true;
-                }
-
-                currentSymbol = currentSymbol.BaseType;
-            }
-
-            return false;
-        }
-
-        static bool IsUnionInterface(INamedTypeSymbol? symbol, Compilation compilation)
-        {
-            if (symbol is not { TypeKind: Interface, Arity: 0 })
-            {
-                return false;
-            }
-
-            var objectSymbol = compilation.GetSpecialType(System_Object);
-
-            return symbol
-                .GetMembers("Value")
-                .OfType<IPropertySymbol>()
-                .Any(propertySymbol =>
-                    propertySymbol.Parameters.Length == 0
-                    && propertySymbol.GetMethod is { DeclaredAccessibility: Accessibility.Public }
-                    && SymbolEqualityComparer.Default.Equals(propertySymbol.Type, objectSymbol)
-                );
-        }
         #endregion
     }
 

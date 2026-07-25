@@ -3,7 +3,6 @@
 namespace Macaron.Union;
 
 internal sealed record UnionGenerationModel(
-    bool SupportsOfficialUnion,
     string Namespace,
     ImmutableArray<string> ContainingTypes,
     string TypeName,
@@ -24,8 +23,7 @@ internal sealed record UnionGenerationModel(
             return false;
         }
 
-        return SupportsOfficialUnion == other.SupportsOfficialUnion
-            && StringComparer.Ordinal.Equals(Namespace, other.Namespace)
+        return StringComparer.Ordinal.Equals(Namespace, other.Namespace)
             && SequenceEqual(ContainingTypes, other.ContainingTypes, StringComparer.Ordinal)
             && StringComparer.Ordinal.Equals(TypeName, other.TypeName)
             && SequenceEqual(Cases, other.Cases, EqualityComparer<UnionCaseGenerationModel>.Default)
@@ -36,9 +34,8 @@ internal sealed record UnionGenerationModel(
     {
         unchecked
         {
-            var hashCode = SupportsOfficialUnion.GetHashCode();
+            var hashCode = StringComparer.Ordinal.GetHashCode(Namespace);
 
-            hashCode = (hashCode * 397) ^ StringComparer.Ordinal.GetHashCode(Namespace);
             hashCode = AddValuesHashCode(hashCode, ContainingTypes, StringComparer.Ordinal);
             hashCode = (hashCode * 397) ^ StringComparer.Ordinal.GetHashCode(TypeName);
             hashCode = AddValuesHashCode(hashCode, Cases, EqualityComparer<UnionCaseGenerationModel>.Default);

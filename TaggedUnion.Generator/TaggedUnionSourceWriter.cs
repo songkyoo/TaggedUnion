@@ -6,7 +6,7 @@ using static Macaron.Union.UnionCaseStorageKind;
 
 namespace Macaron.Union;
 
-internal sealed class TaggedUnionSourceWriter(UnionGenerationModel model)
+internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel model)
 {
     #region Constants
     private const string Indent = "    ";

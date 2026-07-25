@@ -45,7 +45,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         #endregion
     }
 
-    private static SourceText GenerateSourceText(UnionGenerationModel model)
+    private static SourceText GenerateSourceText(TaggedUnionSourceGenerationModel model)
     {
         var writer = new TaggedUnionSourceWriter(model);
         var source = writer.Generate();
@@ -69,6 +69,21 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 )
             )
             .WithTrackingName(nameof(AnalysisResult));
+        var unionGenerationModelProvider = analysisResultProvider
+            .Where(static x => x is AnalysisResult.Success)
+            .Select(static (x, _) => ((AnalysisResult.Success)x).Model)
+            .WithTrackingName(nameof(UnionGenerationModel));
+        var supportsOfficialUnionProvider = context
+            .CompilationProvider
+            .Select(static (compilation, _) => OfficialUnionSupport.IsAvailable(compilation))
+            .WithTrackingName(nameof(OfficialUnionSupport));
+        var sourceGenerationModelProvider = unionGenerationModelProvider
+            .Combine(supportsOfficialUnionProvider)
+            .Select(static (pair, _) => new TaggedUnionSourceGenerationModel(
+                Union: pair.Left,
+                SupportsOfficialUnion: pair.Right
+            ))
+            .WithTrackingName(nameof(TaggedUnionSourceGenerationModel));
 
         context.RegisterSourceOutput(
             source: analysisResultProvider
@@ -85,10 +100,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
             }
         );
         context.RegisterSourceOutput(
-            source: analysisResultProvider
-                .Where(static x => x is AnalysisResult.Success)
-                .Select(static (x, _) => ((AnalysisResult.Success)x).Model)
-                .WithTrackingName(nameof(UnionGenerationModel)),
+            source: sourceGenerationModelProvider,
             action: static (sourceProductionContext, model) =>
             {
                 var hintName = $"{model.HintName}.g.cs";

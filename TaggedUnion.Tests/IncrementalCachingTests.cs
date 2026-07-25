@@ -12,6 +12,8 @@ public sealed class IncrementalCachingTests
     #region Constants
     private const string AnalysisResultTrackingName = "AnalysisResult";
     private const string ModelTrackingName = "UnionGenerationModel";
+    private const string OfficialUnionSupportTrackingName = "OfficialUnionSupport";
+    private const string SourceGenerationModelTrackingName = "TaggedUnionSourceGenerationModel";
     #endregion
 
     #region Tests
@@ -39,7 +41,8 @@ public sealed class IncrementalCachingTests
                 public static int IgnoredByGenerationModel => 42;
             }
             """,
-            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
+            assertOfficialUnionSupportCaching: true
         );
     }
 
@@ -84,7 +87,8 @@ public sealed class IncrementalCachingTests
         IIncrementalGenerator generator,
         string sourceCode,
         string updatedSourceCode,
-        Assembly[] additionalAssemblies
+        Assembly[] additionalAssemblies,
+        bool assertOfficialUnionSupportCaching = false
     )
     {
         var (compilation, driver) = Helper.CreateCompilationAndDriver(
@@ -110,6 +114,12 @@ public sealed class IncrementalCachingTests
         var result = trackingDriver.GetRunResult().Results.Single();
         var analysisResultReasons = GetRunReasons(result.TrackedSteps, AnalysisResultTrackingName);
         var modelReasons = GetRunReasons(result.TrackedSteps, ModelTrackingName);
+        var officialUnionSupportReasons = assertOfficialUnionSupportCaching
+            ? GetRunReasons(result.TrackedSteps, OfficialUnionSupportTrackingName)
+            : [];
+        var sourceGenerationModelReasons = assertOfficialUnionSupportCaching
+            ? GetRunReasons(result.TrackedSteps, SourceGenerationModelTrackingName)
+            : [];
         var outputReasons = result
             .TrackedOutputSteps
             .Values
@@ -122,6 +132,19 @@ public sealed class IncrementalCachingTests
         {
             Assert.That(analysisResultReasons, Is.EqualTo(new[] { IncrementalStepRunReason.Unchanged }));
             Assert.That(modelReasons, Is.EqualTo(new[] { IncrementalStepRunReason.Cached }));
+
+            if (assertOfficialUnionSupportCaching)
+            {
+                Assert.That(
+                    officialUnionSupportReasons,
+                    Is.EqualTo(new[] { IncrementalStepRunReason.Unchanged })
+                );
+                Assert.That(
+                    sourceGenerationModelReasons,
+                    Is.EqualTo(new[] { IncrementalStepRunReason.Cached })
+                );
+            }
+
             Assert.That(outputReasons, Does.Contain(IncrementalStepRunReason.Cached));
             Assert.That(outputReasons, Does.Not.Contain(IncrementalStepRunReason.Modified));
         });
