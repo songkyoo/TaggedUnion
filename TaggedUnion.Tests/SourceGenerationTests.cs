@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.CodeAnalysis;
 
 using static Macaron.Union.Tests.Helper;
@@ -174,6 +175,17 @@ public sealed class SourceGenerationTests
                     #endregion
 
                     #region Conversion Operators
+                    public static implicit operator global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux<int>, string>(Foo value)
+                    {
+                        return value._tag switch
+                        {
+                            0 => default,
+                            1 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux<int>, string>(value.__1),
+                            2 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux<int>, string>(value.__2),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {value._tag}"),
+                        };
+                    }
+
                     public static implicit operator Foo(global::Macaron.Union.Tests.Qux<int> value)
                     {
                         return new Foo(value);
@@ -413,6 +425,17 @@ public sealed class SourceGenerationTests
                     #endregion
 
                     #region Conversion Operators
+                    public static implicit operator global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, int>(Foo value)
+                    {
+                        return value._tag switch
+                        {
+                            0 => default,
+                            1 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, int>(value.__1),
+                            2 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, int>(value.__2),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {value._tag}"),
+                        };
+                    }
+
                     public static implicit operator Foo(global::Macaron.Union.Tests.Qux value)
                     {
                         return new Foo(value);
@@ -643,6 +666,17 @@ public sealed class SourceGenerationTests
                     #endregion
 
                     #region Conversion Operators
+                    public static implicit operator global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, global::Macaron.Union.Tests.Bar>(Foo value)
+                    {
+                        return value._tag switch
+                        {
+                            0 => default,
+                            1 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, global::Macaron.Union.Tests.Bar>(value.__1),
+                            2 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, global::Macaron.Union.Tests.Bar>(value.__2),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {value._tag}"),
+                        };
+                    }
+
                     public static implicit operator Foo(global::Macaron.Union.Tests.Qux value)
                     {
                         return new Foo(value);
@@ -888,6 +922,21 @@ public sealed class SourceGenerationTests
                     #endregion
 
                     #region Conversion Operators
+                    public static implicit operator global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, string, int, global::Macaron.Union.Tests.Bar, global::Macaron.Union.Tests.Quux, global::Macaron.Union.Tests.Baz>(Foo value)
+                    {
+                        return value._tag switch
+                        {
+                            0 => default,
+                            1 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, string, int, global::Macaron.Union.Tests.Bar, global::Macaron.Union.Tests.Quux, global::Macaron.Union.Tests.Baz>(value.__1),
+                            2 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, string, int, global::Macaron.Union.Tests.Bar, global::Macaron.Union.Tests.Quux, global::Macaron.Union.Tests.Baz>(value.__2),
+                            3 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, string, int, global::Macaron.Union.Tests.Bar, global::Macaron.Union.Tests.Quux, global::Macaron.Union.Tests.Baz>(value.__3),
+                            4 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, string, int, global::Macaron.Union.Tests.Bar, global::Macaron.Union.Tests.Quux, global::Macaron.Union.Tests.Baz>(value.__4),
+                            5 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, string, int, global::Macaron.Union.Tests.Bar, global::Macaron.Union.Tests.Quux, global::Macaron.Union.Tests.Baz>(value.__5),
+                            6 => new global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.Qux, string, int, global::Macaron.Union.Tests.Bar, global::Macaron.Union.Tests.Quux, global::Macaron.Union.Tests.Baz>(value.__6),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {value._tag}"),
+                        };
+                    }
+
                     public static implicit operator Foo(global::Macaron.Union.Tests.Qux value)
                     {
                         return new Foo(value);
@@ -1380,7 +1429,7 @@ public sealed class SourceGenerationTests
     }
 
     [Test]
-    public void ConversionOperatorsAreDisabledByDefault()
+    public void CaseConversionOperatorsAreDisabledByDefault()
     {
         var (_, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode:
@@ -1398,11 +1447,109 @@ public sealed class SourceGenerationTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(generatedCode, Does.Not.Contain("#region Conversion Operators"));
-            Assert.That(generatedCode, Does.Not.Contain("implicit operator"));
+            Assert.That(generatedCode, Does.Contain("#region Conversion Operators"));
+            Assert.That(
+                generatedCode,
+                Does.Contain(
+                    "implicit operator global::Macaron.Union.TaggedUnion<int, string>(Foo value)"
+                )
+            );
+            Assert.That(generatedCode, Does.Not.Contain("implicit operator Foo("));
             Assert.That(generatedCode, Does.Not.Contain("explicit operator"));
             Assert.That(generatedCode, Does.Contain("public Foo(int value)"));
             Assert.That(generatedCode, Does.Contain("public Foo(string value)"));
+        });
+    }
+
+    [Test]
+    public void GeneratedUnionImplicitlyConvertsToRuntimeTaggedUnion()
+    {
+        var (compilation, driver) = CreateCompilationAndDriver(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests.GeneratedConversion;
+
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
+            {
+            }
+
+            public static class Scenario
+            {
+                public static object? ConvertInt()
+                {
+                    TaggedUnion<int, string> value = new Foo(42);
+
+                    return value.Value;
+                }
+
+                public static object? ConvertString()
+                {
+                    TaggedUnion<int, string> value = new Foo("value");
+
+                    return value.Value;
+                }
+
+                public static bool ConvertDefault()
+                {
+                    TaggedUnion<int, string> value = default(Foo);
+
+                    return !value.HasValue;
+                }
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
+            assemblyName: "Macaron.TaggedUnion.Tests.GeneratedConversion",
+            generators: [new TaggedUnionGenerator().AsSourceGenerator()]
+        );
+
+        driver.RunGeneratorsAndUpdateCompilation(
+            compilation,
+            out var outputCompilation,
+            out var generatorDiagnostics
+        );
+        var errorDiagnostics = outputCompilation
+            .GetDiagnostics()
+            .Concat(generatorDiagnostics)
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        Assert.That(
+            errorDiagnostics,
+            Is.Empty,
+            string.Join(Environment.NewLine, errorDiagnostics.Select(x => x.ToString()))
+        );
+
+        using var stream = new MemoryStream();
+        var emitResult = outputCompilation.Emit(stream);
+
+        Assert.That(
+            emitResult.Success,
+            Is.True,
+            string.Join(Environment.NewLine, emitResult.Diagnostics.Select(x => x.ToString()))
+        );
+
+        var scenarioType = Assembly
+            .Load(stream.ToArray())
+            .GetType(
+                "Macaron.Union.Tests.GeneratedConversion.Scenario",
+                throwOnError: true
+            )!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                scenarioType.GetMethod("ConvertInt")!.Invoke(obj: null, parameters: null),
+                Is.EqualTo(42)
+            );
+            Assert.That(
+                scenarioType.GetMethod("ConvertString")!.Invoke(obj: null, parameters: null),
+                Is.EqualTo("value")
+            );
+            Assert.That(
+                scenarioType.GetMethod("ConvertDefault")!.Invoke(obj: null, parameters: null),
+                Is.EqualTo(true)
+            );
         });
     }
 
@@ -1477,6 +1624,7 @@ public sealed class SourceGenerationTests
             """,
             expectedFragments:
             [
+                "implicit operator global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.C1, global::Macaron.Union.Tests.C2, global::Macaron.Union.Tests.C3, global::Macaron.Union.Tests.C4, global::Macaron.Union.Tests.C5, global::Macaron.Union.Tests.C6, global::Macaron.Union.Tests.C7, global::Macaron.Union.Tests.C8>(Foo value)",
                 "global::Macaron.Union.ITaggedUnion<global::Macaron.Union.Tests.C1, global::Macaron.Union.Tests.C2, global::Macaron.Union.Tests.C3, global::Macaron.Union.Tests.C4, global::Macaron.Union.Tests.C5, global::Macaron.Union.Tests.C6, global::Macaron.Union.Tests.C7, global::Macaron.Union.Tests.C8>",
                 "public Foo(global::Macaron.Union.Tests.C1 value)",
                 "public Foo(global::Macaron.Union.Tests.C8 value)"

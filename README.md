@@ -35,6 +35,8 @@ readonly partial struct IntOrString :
     public static bool operator ==(IntOrString left, IntOrString right);
     public static bool operator !=(IntOrString left, IntOrString right);
 
+    public static implicit operator global::Macaron.Union.TaggedUnion<int, string>(IntOrString value);
+
     public IntOrString(int value);
     public IntOrString(string value);
 
@@ -111,8 +113,14 @@ IntOrString number = 42;
 IntOrString text = "hello";
 var value = (int)number;
 ```
-
 인터페이스 타입은 C# 언어 제약으로 인해 이 옵션을 활성화해도 캐스팅 연산자를 생성하지 않습니다.
+
+`GenerateConversionOperators` 옵션과 관계없이 생성된 유니온에서 같은 case 목록의 범용 `TaggedUnion<T1, ...>`으로 가는 암시적 변환은 항상 생성됩니다. uninitialized 값은 범용 유니온의 `default` 값으로 변환됩니다.
+
+```csharp
+var named = new IntOrString(42);
+TaggedUnion<int, string> generic = named;
+```
 
 ### 값을 사용하기
 

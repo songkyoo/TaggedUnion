@@ -70,11 +70,8 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
         AppendLine();
 
         // conversion operators
-        if (_caseModels.Any(x => x.SupportsConversionOperators))
-        {
-            WriteConversionOperators();
-            AppendLine();
-        }
+        WriteConversionOperators();
+        AppendLine();
 
         // fields
         WriteFields();
@@ -177,11 +174,31 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
     private void WriteConversionOperators()
     {
         var typeName = model.TypeName;
+        var taggedUnionTypeName = $"global::Macaron.Union.TaggedUnion<{string.Join(", ", _caseModels.Select(x => x.FullyQualifiedTypeName))}>";
         var caseContexts = _caseModels
             .Where(x => x.SupportsConversionOperators)
             .ToArray();
 
         AppendLine("#region Conversion Operators");
+        AppendLine($"public static implicit operator {taggedUnionTypeName}({typeName} value)");
+        AppendLine("{");
+        AppendLine($"{Indent}return value.{TagField} switch");
+        AppendLine($"{Indent}{{");
+        AppendLine($"{Indent}{Indent}0 => default,");
+
+        foreach (var caseContext in _caseModels)
+        {
+            AppendLine($"{Indent}{Indent}{caseContext.Tag} => new {taggedUnionTypeName}(value.{GetValueProperty(caseContext.Tag)}),");
+        }
+
+        AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{value.{TagField}}}\"),");
+        AppendLine($"{Indent}}};");
+        AppendLine("}");
+
+        if (caseContexts.Length > 0)
+        {
+            AppendLine();
+        }
 
         for (var i = 0; i < caseContexts.Length; i++)
         {

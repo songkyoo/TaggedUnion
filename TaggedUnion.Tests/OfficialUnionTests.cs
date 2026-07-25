@@ -95,7 +95,10 @@ public sealed class OfficialUnionTests
                 generatedCode,
                 Does.Contain("[global::System.Runtime.CompilerServices.Union]")
             );
-            Assert.That(generatedCode, Does.Not.Contain("implicit operator"));
+            Assert.That(
+                generatedCode,
+                Does.Not.Contain("implicit operator ValueOrInt(")
+            );
         });
 
         using var stream = new MemoryStream();
