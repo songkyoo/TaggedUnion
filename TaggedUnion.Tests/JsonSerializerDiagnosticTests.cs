@@ -111,4 +111,41 @@ public sealed class JsonSerializerDiagnosticTests
             Assert.That(generatedCodes, Is.Empty);
         });
     }
+
+    [Test]
+    public void StateParameterNameConflictPreventsJsonSerializerGeneration()
+    {
+        var (diagnostics, generatedCodes, _, _) = Helper
+            .CompileAndGetResults<TaggedUnionJsonSerializerGenerator>(
+                sourceCode:
+                """
+                namespace Macaron.Union.Tests;
+
+                public sealed class State
+                {
+                }
+
+                [TaggedUnion]
+                [TaggedUnionJsonSerializer]
+                public readonly partial struct Foo : ITaggedUnionCases<State, string>
+                {
+                }
+                """,
+                additionalAssemblies:
+                [
+                    typeof(TaggedUnionAttribute).Assembly,
+                    typeof(TaggedUnionJsonSerializerAttribute).Assembly,
+                    typeof(JsonSerializer).Assembly,
+                ]
+            );
+        var errorDiagnostics = diagnostics
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(errorDiagnostics, Is.Empty);
+            Assert.That(generatedCodes, Is.Empty);
+        });
+    }
 }

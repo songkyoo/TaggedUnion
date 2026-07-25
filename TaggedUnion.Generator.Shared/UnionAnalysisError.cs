@@ -60,6 +60,18 @@ internal abstract record UnionAnalysisError(Location Location)
         string TargetTypeName
     ) : UnionAnalysisError(Location);
 
+    public sealed record InvalidStateParameterName(
+        Location Location,
+        string ParameterName,
+        string TargetTypeName
+    ) : UnionAnalysisError(Location);
+
+    public sealed record StateParameterNameConflict(
+        Location Location,
+        string ParameterName,
+        string TargetTypeName
+    ) : UnionAnalysisError(Location);
+
     public sealed record CaseAttributeTypeMustMatchCaseType(
         Location Location,
         string CaseTypeName,

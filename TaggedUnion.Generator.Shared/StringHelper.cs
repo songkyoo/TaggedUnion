@@ -20,11 +20,16 @@ internal static class StringHelper
             : name;
     }
 
-    public static bool IsValidParameterName(string name)
+    public static string GetIdentifierValueText(string name)
     {
-        var identifier = name.StartsWith("@", Ordinal)
+        return name.StartsWith("@", Ordinal)
             ? name[1..]
             : name;
+    }
+
+    public static bool IsValidParameterName(string name)
+    {
+        var identifier = GetIdentifierValueText(name);
 
         if (identifier.Length == 0 || !IsIdentifierStartCharacter(identifier[0]))
         {

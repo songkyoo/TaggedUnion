@@ -7,6 +7,8 @@ namespace Macaron.Union;
 public sealed class TaggedUnionAttribute : Attribute
 {
     #region Properties
+    public string StateParamName { get; set; } = "state";
+
     public bool GenerateConversionOperators { get; set; }
     #endregion
 }

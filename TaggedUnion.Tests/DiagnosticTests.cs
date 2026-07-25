@@ -470,6 +470,113 @@ public sealed class DiagnosticTests
     }
 
     [Test]
+    public void InvalidStateParameterName()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(StateParamName = "bad-name")]
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0015",
+            expectedLocationText: "\"bad-name\""
+        );
+    }
+
+    [Test]
+    public void DefaultStateParameterNameConflictsWithCaseParameterName()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public sealed class State
+            {
+            }
+
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnionCases<State, string>
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0016",
+            expectedLocationText: "TaggedUnion"
+        );
+    }
+
+    [Test]
+    public void ExplicitStateParameterNameConflictsWithCaseParameterName()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(StateParamName = "string")]
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0016",
+            expectedLocationText: "\"string\""
+        );
+    }
+
+    [Test]
+    public void EscapedStateParameterNameConflictsWithCaseParameterName()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public sealed class State
+            {
+            }
+
+            [TaggedUnion(StateParamName = "@state")]
+            public readonly partial struct Foo : ITaggedUnionCases<State, string>
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0016",
+            expectedLocationText: "\"@state\""
+        );
+    }
+
+    [Test]
+    public void EscapedCaseParameterNameParticipatesInDuplicateValidation()
+    {
+        AssertDiagnosticLocationText(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public sealed class State
+            {
+            }
+
+            public sealed class Other
+            {
+            }
+
+            [TaggedUnion(StateParamName = "unionState")]
+            [TaggedUnionCase(typeof(Other), "@state")]
+            public readonly partial struct Foo : ITaggedUnionCases<State, Other>
+            {
+            }
+            """,
+            expectedDiagnosticId: "MTU0006",
+            expectedLocationText: "\"@state\""
+        );
+    }
+
+    [Test]
     public void CaseAttributeTypeNotSpecifiedInTaggedUnion()
     {
         AssertDiagnosticLocationText(

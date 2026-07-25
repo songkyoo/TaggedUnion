@@ -494,7 +494,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
 
         AppendLine(")");
         AppendLine("{");
-        AppendLine($"{Indent}switch ({TagField})");
+        AppendLine($"{Indent}switch (this.{TagField})");
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}case 0: throw new global::System.InvalidOperationException(\"Value not initialized.\");");
 
@@ -506,10 +506,44 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
             var castString = caseContext.StorageKind == Reference ? $"({caseTypeName})" : "";
             var nullForgivingAnnotation = caseContext.StorageKind == Reference ? "!" : "";
 
-            AppendLine($"{Indent}{Indent}case {tag}: {paramName}({castString}{GetValueAccessorString(caseContext)}{nullForgivingAnnotation}); return;");
+            AppendLine($"{Indent}{Indent}case {tag}: {paramName}({castString}this.{GetValueAccessorString(caseContext)}{nullForgivingAnnotation}); return;");
         }
 
-        AppendLine($"{Indent}{Indent}default: throw new global::System.InvalidOperationException($\"Invalid tag: {{{TagField}}}\");");
+        AppendLine($"{Indent}{Indent}default: throw new global::System.InvalidOperationException($\"Invalid tag: {{this.{TagField}}}\");");
+        AppendLine($"{Indent}}}");
+        AppendLine("}");
+        AppendLine();
+
+        // Switch with state
+        AppendLine("public void Switch<TState>(");
+        AppendLine($"{Indent}TState {model.StateParamName},");
+
+        for (var i = 0; i < _caseModels.Length; i++)
+        {
+            var caseContext = _caseModels[i];
+            var separator = i < _caseModels.Length - 1 ? "," : "";
+
+            AppendLine($"{Indent}global::System.Action<{caseContext.FullyQualifiedTypeName}, TState> {caseContext.ParamName}{separator}");
+        }
+
+        AppendLine(")");
+        AppendLine("{");
+        AppendLine($"{Indent}switch (this.{TagField})");
+        AppendLine($"{Indent}{{");
+        AppendLine($"{Indent}{Indent}case 0: throw new global::System.InvalidOperationException(\"Value not initialized.\");");
+
+        foreach (var caseContext in _caseModels)
+        {
+            var tag = caseContext.Tag;
+            var caseTypeName = caseContext.FullyQualifiedTypeName;
+            var paramName = caseContext.ParamName;
+            var castString = caseContext.StorageKind == Reference ? $"({caseTypeName})" : "";
+            var nullForgivingAnnotation = caseContext.StorageKind == Reference ? "!" : "";
+
+            AppendLine($"{Indent}{Indent}case {tag}: {paramName}({castString}this.{GetValueAccessorString(caseContext)}{nullForgivingAnnotation}, {model.StateParamName}); return;");
+        }
+
+        AppendLine($"{Indent}{Indent}default: throw new global::System.InvalidOperationException($\"Invalid tag: {{this.{TagField}}}\");");
         AppendLine($"{Indent}}}");
         AppendLine("}");
         AppendLine();
@@ -527,7 +561,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
 
         AppendLine(")");
         AppendLine("{");
-        AppendLine($"{Indent}return {TagField} switch");
+        AppendLine($"{Indent}return this.{TagField} switch");
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}0 => throw new global::System.InvalidOperationException(\"Value not initialized.\"),");
 
@@ -538,10 +572,43 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
             var castString = caseContext.StorageKind == Reference ? $"({caseTypeName})" : "";
             var nullForgivingAnnotation = caseContext.StorageKind == Reference ? "!" : "";
 
-            AppendLine($"{Indent}{Indent}{caseContext.Tag} => {paramName}({castString}{GetValueAccessorString(caseContext)}{nullForgivingAnnotation}),");
+            AppendLine($"{Indent}{Indent}{caseContext.Tag} => {paramName}({castString}this.{GetValueAccessorString(caseContext)}{nullForgivingAnnotation}),");
         }
 
-        AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{{TagField}}}\"),");
+        AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{this.{TagField}}}\"),");
+        AppendLine($"{Indent}}};");
+        AppendLine("}");
+        AppendLine();
+
+        // Match with state
+        AppendLine("public TResult Match<TState, TResult>(");
+        AppendLine($"{Indent}TState {model.StateParamName},");
+
+        for (var i = 0; i < _caseModels.Length; i++)
+        {
+            var caseContext = _caseModels[i];
+            var separator = i < _caseModels.Length - 1 ? "," : "";
+
+            AppendLine($"{Indent}global::System.Func<{caseContext.FullyQualifiedTypeName}, TState, TResult> {caseContext.ParamName}{separator}");
+        }
+
+        AppendLine(")");
+        AppendLine("{");
+        AppendLine($"{Indent}return this.{TagField} switch");
+        AppendLine($"{Indent}{{");
+        AppendLine($"{Indent}{Indent}0 => throw new global::System.InvalidOperationException(\"Value not initialized.\"),");
+
+        foreach (var caseContext in _caseModels)
+        {
+            var caseTypeName = caseContext.FullyQualifiedTypeName;
+            var paramName = caseContext.ParamName;
+            var castString = caseContext.StorageKind == Reference ? $"({caseTypeName})" : "";
+            var nullForgivingAnnotation = caseContext.StorageKind == Reference ? "!" : "";
+
+            AppendLine($"{Indent}{Indent}{caseContext.Tag} => {paramName}({castString}this.{GetValueAccessorString(caseContext)}{nullForgivingAnnotation}, {model.StateParamName}),");
+        }
+
+        AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{this.{TagField}}}\"),");
         AppendLine($"{Indent}}};");
         AppendLine("}");
 

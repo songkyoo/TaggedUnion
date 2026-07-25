@@ -359,12 +359,27 @@ public sealed class SourceGenerationTests
                         global::System.Action<string> @string
                     )
                     {
-                        switch (_tag)
+                        switch (this._tag)
                         {
                             case 0: throw new global::System.InvalidOperationException("Value not initialized.");
-                            case 1: qux((global::Macaron.Union.Tests.Qux<int>)_reference!); return;
-                            case 2: @string((string)_reference!); return;
-                            default: throw new global::System.InvalidOperationException($"Invalid tag: {_tag}");
+                            case 1: qux((global::Macaron.Union.Tests.Qux<int>)this._reference!); return;
+                            case 2: @string((string)this._reference!); return;
+                            default: throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}");
+                        }
+                    }
+
+                    public void Switch<TState>(
+                        TState state,
+                        global::System.Action<global::Macaron.Union.Tests.Qux<int>, TState> qux,
+                        global::System.Action<string, TState> @string
+                    )
+                    {
+                        switch (this._tag)
+                        {
+                            case 0: throw new global::System.InvalidOperationException("Value not initialized.");
+                            case 1: qux((global::Macaron.Union.Tests.Qux<int>)this._reference!, state); return;
+                            case 2: @string((string)this._reference!, state); return;
+                            default: throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}");
                         }
                     }
 
@@ -373,12 +388,27 @@ public sealed class SourceGenerationTests
                         global::System.Func<string, TResult> @string
                     )
                     {
-                        return _tag switch
+                        return this._tag switch
                         {
                             0 => throw new global::System.InvalidOperationException("Value not initialized."),
-                            1 => qux((global::Macaron.Union.Tests.Qux<int>)_reference!),
-                            2 => @string((string)_reference!),
-                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+                            1 => qux((global::Macaron.Union.Tests.Qux<int>)this._reference!),
+                            2 => @string((string)this._reference!),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}"),
+                        };
+                    }
+
+                    public TResult Match<TState, TResult>(
+                        TState state,
+                        global::System.Func<global::Macaron.Union.Tests.Qux<int>, TState, TResult> qux,
+                        global::System.Func<string, TState, TResult> @string
+                    )
+                    {
+                        return this._tag switch
+                        {
+                            0 => throw new global::System.InvalidOperationException("Value not initialized."),
+                            1 => qux((global::Macaron.Union.Tests.Qux<int>)this._reference!, state),
+                            2 => @string((string)this._reference!, state),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}"),
                         };
                     }
                     #endregion
@@ -612,12 +642,27 @@ public sealed class SourceGenerationTests
                         global::System.Action<int> @int
                     )
                     {
-                        switch (_tag)
+                        switch (this._tag)
                         {
                             case 0: throw new global::System.InvalidOperationException("Value not initialized.");
-                            case 1: qux(_unmanaged.Value1); return;
-                            case 2: @int(_unmanaged.Value2); return;
-                            default: throw new global::System.InvalidOperationException($"Invalid tag: {_tag}");
+                            case 1: qux(this._unmanaged.Value1); return;
+                            case 2: @int(this._unmanaged.Value2); return;
+                            default: throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}");
+                        }
+                    }
+
+                    public void Switch<TState>(
+                        TState state,
+                        global::System.Action<global::Macaron.Union.Tests.Qux, TState> qux,
+                        global::System.Action<int, TState> @int
+                    )
+                    {
+                        switch (this._tag)
+                        {
+                            case 0: throw new global::System.InvalidOperationException("Value not initialized.");
+                            case 1: qux(this._unmanaged.Value1, state); return;
+                            case 2: @int(this._unmanaged.Value2, state); return;
+                            default: throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}");
                         }
                     }
 
@@ -626,12 +671,27 @@ public sealed class SourceGenerationTests
                         global::System.Func<int, TResult> @int
                     )
                     {
-                        return _tag switch
+                        return this._tag switch
                         {
                             0 => throw new global::System.InvalidOperationException("Value not initialized."),
-                            1 => qux(_unmanaged.Value1),
-                            2 => @int(_unmanaged.Value2),
-                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+                            1 => qux(this._unmanaged.Value1),
+                            2 => @int(this._unmanaged.Value2),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}"),
+                        };
+                    }
+
+                    public TResult Match<TState, TResult>(
+                        TState state,
+                        global::System.Func<global::Macaron.Union.Tests.Qux, TState, TResult> qux,
+                        global::System.Func<int, TState, TResult> @int
+                    )
+                    {
+                        return this._tag switch
+                        {
+                            0 => throw new global::System.InvalidOperationException("Value not initialized."),
+                            1 => qux(this._unmanaged.Value1, state),
+                            2 => @int(this._unmanaged.Value2, state),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}"),
                         };
                     }
                     #endregion
@@ -867,12 +927,27 @@ public sealed class SourceGenerationTests
                         global::System.Action<global::Macaron.Union.Tests.Bar> bar
                     )
                     {
-                        switch (_tag)
+                        switch (this._tag)
                         {
                             case 0: throw new global::System.InvalidOperationException("Value not initialized.");
-                            case 1: qux(_value1); return;
-                            case 2: bar(_value2); return;
-                            default: throw new global::System.InvalidOperationException($"Invalid tag: {_tag}");
+                            case 1: qux(this._value1); return;
+                            case 2: bar(this._value2); return;
+                            default: throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}");
+                        }
+                    }
+
+                    public void Switch<TState>(
+                        TState state,
+                        global::System.Action<global::Macaron.Union.Tests.Qux, TState> qux,
+                        global::System.Action<global::Macaron.Union.Tests.Bar, TState> bar
+                    )
+                    {
+                        switch (this._tag)
+                        {
+                            case 0: throw new global::System.InvalidOperationException("Value not initialized.");
+                            case 1: qux(this._value1, state); return;
+                            case 2: bar(this._value2, state); return;
+                            default: throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}");
                         }
                     }
 
@@ -881,12 +956,27 @@ public sealed class SourceGenerationTests
                         global::System.Func<global::Macaron.Union.Tests.Bar, TResult> bar
                     )
                     {
-                        return _tag switch
+                        return this._tag switch
                         {
                             0 => throw new global::System.InvalidOperationException("Value not initialized."),
-                            1 => qux(_value1),
-                            2 => bar(_value2),
-                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+                            1 => qux(this._value1),
+                            2 => bar(this._value2),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}"),
+                        };
+                    }
+
+                    public TResult Match<TState, TResult>(
+                        TState state,
+                        global::System.Func<global::Macaron.Union.Tests.Qux, TState, TResult> qux,
+                        global::System.Func<global::Macaron.Union.Tests.Bar, TState, TResult> bar
+                    )
+                    {
+                        return this._tag switch
+                        {
+                            0 => throw new global::System.InvalidOperationException("Value not initialized."),
+                            1 => qux(this._value1, state),
+                            2 => bar(this._value2, state),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}"),
                         };
                     }
                     #endregion
@@ -1328,16 +1418,39 @@ public sealed class SourceGenerationTests
                         global::System.Action<global::Macaron.Union.Tests.Baz> baz
                     )
                     {
-                        switch (_tag)
+                        switch (this._tag)
                         {
                             case 0: throw new global::System.InvalidOperationException("Value not initialized.");
-                            case 1: qux(_unmanaged.Value1); return;
-                            case 2: @string((string)_reference!); return;
-                            case 3: @int(_unmanaged.Value3); return;
-                            case 4: bar(_value4); return;
-                            case 5: quux((global::Macaron.Union.Tests.Quux)_reference!); return;
-                            case 6: baz(_value6); return;
-                            default: throw new global::System.InvalidOperationException($"Invalid tag: {_tag}");
+                            case 1: qux(this._unmanaged.Value1); return;
+                            case 2: @string((string)this._reference!); return;
+                            case 3: @int(this._unmanaged.Value3); return;
+                            case 4: bar(this._value4); return;
+                            case 5: quux((global::Macaron.Union.Tests.Quux)this._reference!); return;
+                            case 6: baz(this._value6); return;
+                            default: throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}");
+                        }
+                    }
+
+                    public void Switch<TState>(
+                        TState state,
+                        global::System.Action<global::Macaron.Union.Tests.Qux, TState> qux,
+                        global::System.Action<string, TState> @string,
+                        global::System.Action<int, TState> @int,
+                        global::System.Action<global::Macaron.Union.Tests.Bar, TState> bar,
+                        global::System.Action<global::Macaron.Union.Tests.Quux, TState> quux,
+                        global::System.Action<global::Macaron.Union.Tests.Baz, TState> baz
+                    )
+                    {
+                        switch (this._tag)
+                        {
+                            case 0: throw new global::System.InvalidOperationException("Value not initialized.");
+                            case 1: qux(this._unmanaged.Value1, state); return;
+                            case 2: @string((string)this._reference!, state); return;
+                            case 3: @int(this._unmanaged.Value3, state); return;
+                            case 4: bar(this._value4, state); return;
+                            case 5: quux((global::Macaron.Union.Tests.Quux)this._reference!, state); return;
+                            case 6: baz(this._value6, state); return;
+                            default: throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}");
                         }
                     }
 
@@ -1350,16 +1463,39 @@ public sealed class SourceGenerationTests
                         global::System.Func<global::Macaron.Union.Tests.Baz, TResult> baz
                     )
                     {
-                        return _tag switch
+                        return this._tag switch
                         {
                             0 => throw new global::System.InvalidOperationException("Value not initialized."),
-                            1 => qux(_unmanaged.Value1),
-                            2 => @string((string)_reference!),
-                            3 => @int(_unmanaged.Value3),
-                            4 => bar(_value4),
-                            5 => quux((global::Macaron.Union.Tests.Quux)_reference!),
-                            6 => baz(_value6),
-                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {_tag}"),
+                            1 => qux(this._unmanaged.Value1),
+                            2 => @string((string)this._reference!),
+                            3 => @int(this._unmanaged.Value3),
+                            4 => bar(this._value4),
+                            5 => quux((global::Macaron.Union.Tests.Quux)this._reference!),
+                            6 => baz(this._value6),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}"),
+                        };
+                    }
+
+                    public TResult Match<TState, TResult>(
+                        TState state,
+                        global::System.Func<global::Macaron.Union.Tests.Qux, TState, TResult> qux,
+                        global::System.Func<string, TState, TResult> @string,
+                        global::System.Func<int, TState, TResult> @int,
+                        global::System.Func<global::Macaron.Union.Tests.Bar, TState, TResult> bar,
+                        global::System.Func<global::Macaron.Union.Tests.Quux, TState, TResult> quux,
+                        global::System.Func<global::Macaron.Union.Tests.Baz, TState, TResult> baz
+                    )
+                    {
+                        return this._tag switch
+                        {
+                            0 => throw new global::System.InvalidOperationException("Value not initialized."),
+                            1 => qux(this._unmanaged.Value1, state),
+                            2 => @string((string)this._reference!, state),
+                            3 => @int(this._unmanaged.Value3, state),
+                            4 => bar(this._value4, state),
+                            5 => quux((global::Macaron.Union.Tests.Quux)this._reference!, state),
+                            6 => baz(this._value6, state),
+                            _ => throw new global::System.InvalidOperationException($"Invalid tag: {this._tag}"),
                         };
                     }
                     #endregion
@@ -1420,6 +1556,91 @@ public sealed class SourceGenerationTests
                 "global::System.Action<global::Macaron.Union.Tests.Qux<int>> baz",
                 "global::System.Func<global::Macaron.Union.Tests.Qux<int>, TResult> baz"
             ]
+        );
+    }
+
+    [Test]
+    public void StateParameterNameCanBeCustomized()
+    {
+        AssertGeneratedCodeContains(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public sealed class State
+            {
+            }
+
+            [TaggedUnion(StateParamName = "_tag")]
+            public readonly partial struct Foo : ITaggedUnionCases<State, string>
+            {
+            }
+            """,
+            expectedFragments:
+            [
+                "public void Switch<TState>(",
+                "TState _tag,",
+                "global::System.Action<global::Macaron.Union.Tests.State, TState> state,",
+                "global::System.Action<string, TState> @string",
+                "switch (this._tag)",
+                "case 1: state((global::Macaron.Union.Tests.State)this._reference!, _tag); return;",
+                "public TResult Match<TState, TResult>(",
+                "global::System.Func<global::Macaron.Union.Tests.State, TState, TResult> state,",
+                "global::System.Func<string, TState, TResult> @string",
+                "1 => state((global::Macaron.Union.Tests.State)this._reference!, _tag),"
+            ]
+        );
+    }
+
+    [Test]
+    public void StateParameterNameCanShadowGeneratedMember()
+    {
+        var (compilation, driver) = CreateCompilationAndDriver(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public sealed class State
+            {
+            }
+
+            [TaggedUnion(StateParamName = "_tag")]
+            public readonly partial struct Foo : ITaggedUnionCases<State, string>
+            {
+            }
+
+            public static class FooExtensions
+            {
+                public static string Format(Foo value)
+                {
+                    return value.Match(
+                        "_",
+                        static (_, state) => state,
+                        static (_, state) => state
+                    );
+                }
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
+            assemblyName: "Macaron.TaggedUnion.Tests",
+            generators: [new TaggedUnionGenerator().AsSourceGenerator()]
+        );
+
+        driver.RunGeneratorsAndUpdateCompilation(
+            compilation,
+            out var outputCompilation,
+            out var generatorDiagnostics
+        );
+        var errorDiagnostics = outputCompilation
+            .GetDiagnostics()
+            .Concat(generatorDiagnostics)
+            .Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .ToArray();
+
+        Assert.That(
+            errorDiagnostics,
+            Is.Empty,
+            string.Join(Environment.NewLine, errorDiagnostics.Select(diagnostic => diagnostic.ToString()))
         );
     }
 

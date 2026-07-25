@@ -6,6 +6,7 @@ internal sealed record UnionGenerationModel(
     string Namespace,
     ImmutableArray<string> ContainingTypes,
     string TypeName,
+    string StateParamName,
     ImmutableArray<UnionCaseGenerationModel> Cases,
     string HintName
 )
@@ -26,6 +27,7 @@ internal sealed record UnionGenerationModel(
         return StringComparer.Ordinal.Equals(Namespace, other.Namespace)
             && SequenceEqual(ContainingTypes, other.ContainingTypes, StringComparer.Ordinal)
             && StringComparer.Ordinal.Equals(TypeName, other.TypeName)
+            && StringComparer.Ordinal.Equals(StateParamName, other.StateParamName)
             && SequenceEqual(Cases, other.Cases, EqualityComparer<UnionCaseGenerationModel>.Default)
             && StringComparer.Ordinal.Equals(HintName, other.HintName);
     }
@@ -38,6 +40,7 @@ internal sealed record UnionGenerationModel(
 
             hashCode = AddValuesHashCode(hashCode, ContainingTypes, StringComparer.Ordinal);
             hashCode = (hashCode * 397) ^ StringComparer.Ordinal.GetHashCode(TypeName);
+            hashCode = (hashCode * 397) ^ StringComparer.Ordinal.GetHashCode(StateParamName);
             hashCode = AddValuesHashCode(hashCode, Cases, EqualityComparer<UnionCaseGenerationModel>.Default);
             hashCode = (hashCode * 397) ^ StringComparer.Ordinal.GetHashCode(HintName);
 

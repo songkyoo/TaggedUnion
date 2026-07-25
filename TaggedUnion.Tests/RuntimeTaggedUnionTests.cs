@@ -7,6 +7,24 @@ namespace Macaron.Union.Tests;
 public sealed class RuntimeTaggedUnionTests
 {
     [Test]
+    public void TaggedUnionAttributeUsesWritableStateParameterProperty()
+    {
+        var constructors = typeof(TaggedUnionAttribute).GetConstructors();
+        var attribute = new TaggedUnionAttribute();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(constructors, Has.Length.EqualTo(1));
+            Assert.That(constructors[0].GetParameters(), Is.Empty);
+            Assert.That(attribute.StateParamName, Is.EqualTo("state"));
+        });
+
+        attribute.StateParamName = "context";
+
+        Assert.That(attribute.StateParamName, Is.EqualTo("context"));
+    }
+
+    [Test]
     public void GenericTypesCoverAritiesFromTwoThroughEight()
     {
         Type[] taggedUnionTypes =
@@ -64,6 +82,20 @@ public sealed class RuntimeTaggedUnionTests
                         .GetMethods(BindingFlags.Public | BindingFlags.Instance)
                         .Count(method => method.Name == nameof(TaggedUnion<int, string>.TryGetValue)),
                     Is.EqualTo(arity),
+                    taggedUnionType.FullName
+                );
+                Assert.That(
+                    taggedUnionType
+                        .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                        .Count(method => method.Name == nameof(TaggedUnion<int, string>.Switch)),
+                    Is.EqualTo(2),
+                    taggedUnionType.FullName
+                );
+                Assert.That(
+                    taggedUnionType
+                        .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                        .Count(method => method.Name == nameof(TaggedUnion<int, string>.Match)),
+                    Is.EqualTo(2),
                     taggedUnionType.FullName
                 );
             }
@@ -179,6 +211,30 @@ public sealed class RuntimeTaggedUnionTests
         {
             Assert.That(switchedValue, Is.EqualTo("value"));
             Assert.That(matchedValue, Is.EqualTo("value"));
+        });
+    }
+
+    [Test]
+    public void SwitchAndMatchPassStateToTheActiveCase()
+    {
+        var value = new TaggedUnion<int, string>("value");
+        var switchedValues = new List<string>();
+
+        value.Switch(
+            switchedValues,
+            static (intValue, values) => values.Add(intValue.ToString()),
+            static (stringValue, values) => values.Add(stringValue)
+        );
+        var matchedValue = value.Match(
+            "matched:",
+            static (intValue, prefix) => prefix + intValue,
+            static (stringValue, prefix) => prefix + stringValue
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(switchedValues, Is.EqualTo(new[] { "value" }));
+            Assert.That(matchedValue, Is.EqualTo("matched:value"));
         });
     }
 

@@ -15,7 +15,18 @@ namespace Macaron.Union;
 
 internal static class UnionGenerationModelFactory
 {
+    #region Constants
+    private const string DefaultStateParamName = "state";
+    private const string StateParamNamePropertyName = "StateParamName";
+    #endregion
+
     #region Types
+    private sealed record StateParameterNameContext(
+        string ParamName,
+        Location Location,
+        bool IsValid
+    );
+
     private sealed record TaggedUnionCasesInterfaceContext(
         INamedTypeSymbol TypeSymbol,
         Location Location,
@@ -61,6 +72,11 @@ internal static class UnionGenerationModelFactory
         {
             return AnalysisResult.Failure.Empty;
         }
+
+        var stateParameterNameContext = GetStateParameterNameContext(
+            taggedUnionAttribute,
+            cancellationToken
+        );
 
         var taggedUnionCasesInterfaces = GetTaggedUnionCasesInterfaceContexts(
             targetTypeSymbol,
@@ -141,6 +157,12 @@ internal static class UnionGenerationModelFactory
             caseCandidates,
             errorsBuilder
         );
+        isValid &= ValidateStateParameterName(
+            structDeclarationSyntax,
+            stateParameterNameContext,
+            caseCandidates,
+            errorsBuilder
+        );
 
         if (!isValid)
         {
@@ -172,6 +194,7 @@ internal static class UnionGenerationModelFactory
                 .Select(GetPartialTypeDeclarationString)
                 .ToImmutableArray(),
             TypeName: targetTypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+            StateParamName: stateParameterNameContext.ParamName,
             Cases: casesBuilder.ToImmutable(),
             HintName: GetTypeHintName(targetTypeSymbol)
         );
@@ -238,6 +261,66 @@ internal static class UnionGenerationModelFactory
             return builder.ToImmutable();
         }
 
+        #endregion
+    }
+
+    private static StateParameterNameContext GetStateParameterNameContext(
+        AttributeData attribute,
+        CancellationToken cancellationToken
+    )
+    {
+        var namedArgument = attribute.NamedArguments.FirstOrDefault(argument =>
+            argument.Key == StateParamNamePropertyName
+        );
+
+        if (namedArgument.Key == null)
+        {
+            return new StateParameterNameContext(
+                ParamName: DefaultStateParamName,
+                Location: GetAttributeLocation(attribute, cancellationToken),
+                IsValid: true
+            );
+        }
+
+        var value = namedArgument.Value.Value as string;
+        var isValid = value != null && IsValidParameterName(value);
+
+        return new StateParameterNameContext(
+            ParamName: value != null ? EscapeIdentifier(value) : "<null>",
+            Location: GetStateParameterNameLocation(attribute, cancellationToken),
+            IsValid: isValid
+        );
+
+        #region Local Functions
+        static Location GetAttributeLocation(
+            AttributeData attribute,
+            CancellationToken cancellationToken
+        )
+        {
+            return attribute.ApplicationSyntaxReference
+                    ?.GetSyntax(cancellationToken)
+                    .GetLocation()
+                ?? Location.None;
+        }
+
+        static Location GetStateParameterNameLocation(
+            AttributeData attribute,
+            CancellationToken cancellationToken
+        )
+        {
+            var attributeSyntax = attribute.ApplicationSyntaxReference
+                ?.GetSyntax(cancellationToken) as AttributeSyntax;
+            var argument = attributeSyntax
+                ?.ArgumentList
+                ?.Arguments
+                .FirstOrDefault(argument =>
+                    argument.NameEquals?.Name.Identifier.ValueText
+                        == StateParamNamePropertyName
+                );
+
+            return argument?.Expression.GetLocation()
+                ?? GetAttributeLocation(attribute, cancellationToken);
+        }
         #endregion
     }
 
@@ -634,7 +717,10 @@ internal static class UnionGenerationModelFactory
             {
                 invalidCaseParameterNames.Add(candidate);
             }
-            else if (knownParameterNames.TryGetValue(candidate.ParamName, out var existingCandidate))
+            else if (knownParameterNames.TryGetValue(
+                GetIdentifierValueText(candidate.ParamName),
+                out var existingCandidate
+            ))
             {
                 duplicateCaseParameterNames.Add(GetDuplicateCaseParameterNameErrorCandidate(
                     existingCandidate,
@@ -643,7 +729,7 @@ internal static class UnionGenerationModelFactory
             }
             else
             {
-                knownParameterNames.Add(candidate.ParamName, candidate);
+                knownParameterNames.Add(GetIdentifierValueText(candidate.ParamName), candidate);
             }
         }
 
@@ -730,6 +816,45 @@ internal static class UnionGenerationModelFactory
                 : existingCandidate;
         }
         #endregion
+    }
+
+    private static bool ValidateStateParameterName(
+        StructDeclarationSyntax structDeclarationSyntax,
+        StateParameterNameContext stateParameterName,
+        ImmutableArray<UnionCaseCandidateContext> candidates,
+        ImmutableArray<UnionAnalysisError>.Builder errorsBuilder
+    )
+    {
+        if (!stateParameterName.IsValid)
+        {
+            errorsBuilder.Add(new UnionAnalysisError.InvalidStateParameterName(
+                Location: stateParameterName.Location,
+                ParameterName: stateParameterName.ParamName,
+                TargetTypeName: structDeclarationSyntax.Identifier.ToString()
+            ));
+
+            return false;
+        }
+
+        var identifierValueText = GetIdentifierValueText(stateParameterName.ParamName);
+        var hasConflict = candidates.Any(candidate =>
+            candidate.IsParamNameValid
+            && StringComparer.Ordinal.Equals(
+                GetIdentifierValueText(candidate.ParamName),
+                identifierValueText
+            )
+        );
+
+        if (hasConflict)
+        {
+            errorsBuilder.Add(new UnionAnalysisError.StateParameterNameConflict(
+                Location: stateParameterName.Location,
+                ParameterName: stateParameterName.ParamName,
+                TargetTypeName: structDeclarationSyntax.Identifier.ToString()
+            ));
+        }
+
+        return !hasConflict;
     }
 
     private static bool ValidateCaseTags(

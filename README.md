@@ -10,6 +10,16 @@ dotnet pack ./TaggedUnion/TaggedUnion.csproj -c Release
 
 `./TaggedUnion/bin/Release/` 폴더에 `nupkg` 확장자를 가지는 패키지가 생성됩니다.
 
+### 템플릿을 사용하는 코드
+
+`ITaggedUnionCases<T1, ...>`, `ITaggedUnion<T1, ...>`, `TaggedUnion<T1, ...>` 선언은 T4 템플릿에서 생성합니다. 템플릿을 수정한 후 저장소 루트에서 다음 명령을 실행합니다.
+
+```shell
+dotnet run --file ./scripts/GenerateTaggedUnionSources.cs
+```
+
+빌드, 패키지 생성 시에는 이 명령을 자동으로 실행하지 않기 때문에 수정 후 직접 호출해야 합니다.
+
 ## 사용법
 
 유니온으로 사용할 타입을 `partial struct`로 선언하고 `TaggedUnion` 어트리뷰트를 적용합니다. `record struct`는 지원하지 않습니다. 포함될 타입은 `ITaggedUnionCases<T1, ...>` 인터페이스의 타입 인자로 지정하며, 유니온 타입 자기 자신은 케이스 타입으로 지정할 수 없습니다. `TaggedUnion`이 선언되는 타입은 제네릭이 아니어야 하고 인스턴스 생성자를 가질 수 없습니다.
@@ -57,9 +67,19 @@ readonly partial struct IntOrString :
         global::System.Action<int> @int,
         global::System.Action<string> @string);
 
+    public void Switch<TState>(
+        TState state,
+        global::System.Action<int, TState> @int,
+        global::System.Action<string, TState> @string);
+
     public TResult Match<TResult>(
         global::System.Func<int, TResult> @int,
         global::System.Func<string, TResult> @string);
+
+    public TResult Match<TState, TResult>(
+        TState state,
+        global::System.Func<int, TState, TResult> @int,
+        global::System.Func<string, TState, TResult> @string);
 }
 ```
 
@@ -172,7 +192,22 @@ intOrString.Switch(
 var result = number.Match(
     @int: value => $"int: {value}",
     @string: value => $"string: {value}");
+
+// 상태를 함께 전달하는 경우
+var lines = new List<string>();
+
+intOrString.Switch(
+    lines,
+    @int: static (value, state) => state.Add($"int: {value}"),
+    @string: static (value, state) => state.Add($"string: {value}"));
+
+var formatted = number.Match(
+    "value: ",
+    @int: static (value, state) => state + value,
+    @string: static (value, state) => state + value);
 ```
+
+상태를 받는 오버로드는 상태를 첫 번째 매개변수로 받고 각 델리게이트에는 케이스 값, 상태 순서로 전달합니다.
 
 ##### Switch, Match의 매개변수 이름
 
@@ -184,6 +219,15 @@ var result = number.Match(
 [TaggedUnion]
 [TaggedUnionCase(typeof(Failure), paramName: "error")]
 public partial struct Result : ITaggedUnionCases<Success, Failure>
+{
+}
+```
+
+상태 매개변수 이름은 기본적으로 `state`입니다. 확정된 케이스 매개변수 이름 중 `state`가 있다면 `MTU0016` 진단과 함께 코드 생성이 중단됩니다. 이 경우 `TaggedUnion`의 `StateParamName` 프로퍼티에 유효하고 충돌하지 않는 C# 식별자를 지정해야 합니다.
+
+```csharp
+[TaggedUnion(StateParamName = "context")]
+public partial struct StateOrFailure : ITaggedUnionCases<State, Failure>
 {
 }
 ```

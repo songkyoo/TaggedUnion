@@ -130,6 +130,24 @@ internal static class TaggedUnionDiagnostics
         isEnabledByDefault: true
     );
 
+    public static readonly DiagnosticDescriptor InvalidStateParameterNameRule = new(
+        id: "MTU0015",
+        title: "State parameter name must be valid",
+        messageFormat: "State parameter name '{0}' is not valid in tagged union target type '{1}'.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
+
+    public static readonly DiagnosticDescriptor StateParameterNameConflictRule = new(
+        id: "MTU0016",
+        title: "State parameter name cannot conflict with a case parameter name",
+        messageFormat: "State parameter name '{0}' conflicts with a case parameter name in tagged union target type '{1}'.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
+
     public static Diagnostic CreateDiagnostic(UnionAnalysisError error)
     {
         return error switch
@@ -183,6 +201,16 @@ internal static class TaggedUnionDiagnostics
                 descriptor: InvalidCaseParameterNameRule,
                 location: value.Location,
                 messageArgs: [value.CaseTypeName, value.ParameterName, value.TargetTypeName]
+            ),
+            UnionAnalysisError.InvalidStateParameterName value => Diagnostic.Create(
+                descriptor: InvalidStateParameterNameRule,
+                location: value.Location,
+                messageArgs: [value.ParameterName, value.TargetTypeName]
+            ),
+            UnionAnalysisError.StateParameterNameConflict value => Diagnostic.Create(
+                descriptor: StateParameterNameConflictRule,
+                location: value.Location,
+                messageArgs: [value.ParameterName, value.TargetTypeName]
             ),
             UnionAnalysisError.CaseAttributeTypeMustMatchCaseType value => Diagnostic.Create(
                 descriptor: CaseAttributeTypeMustMatchCaseTypeRule,

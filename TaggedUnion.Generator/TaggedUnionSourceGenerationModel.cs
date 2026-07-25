@@ -13,9 +13,11 @@ internal sealed record TaggedUnionSourceGenerationModel(
 
     public string TypeName => Model.Union.TypeName;
 
+    public string StateParamName => Model.Union.StateParamName;
+
+    public bool GenerateConversionOperators => Model.GenerateConversionOperators;
+
     public ImmutableArray<UnionCaseGenerationModel> Cases => Model.Union.Cases;
 
     public string HintName => Model.Union.HintName;
-
-    public bool GenerateConversionOperators => Model.GenerateConversionOperators;
 }

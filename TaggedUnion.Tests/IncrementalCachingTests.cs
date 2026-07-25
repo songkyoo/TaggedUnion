@@ -143,6 +143,35 @@ public sealed class IncrementalCachingTests
             expectModelChange: true
         );
     }
+
+    [Test]
+    public void TaggedUnionGeneratorUpdatesSourceOutputWhenStateParameterNameChanges()
+    {
+        AssertSourceOutputRunReasons(
+            generator: new TaggedUnionGenerator(),
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
+            {
+            }
+            """,
+            updatedSourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion(StateParamName = "context")]
+            public readonly partial struct Foo : ITaggedUnionCases<int, string>
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
+            assertOfficialUnionSupportCaching: true,
+            expectModelChange: true
+        );
+    }
     #endregion
 
     #region Static Methods
