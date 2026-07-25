@@ -134,6 +134,44 @@ public sealed class DiagnosticTests
     }
 
     [Test]
+    public void SelfReferentialCaseType()
+    {
+        var (diagnostics, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public readonly partial struct FooOrBar : ITaggedUnion<FooOrBar, int>
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+        );
+        var errorDiagnostics = diagnostics
+            .Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .ToArray();
+        var diagnostic = errorDiagnostics.Single(diagnostic => diagnostic.Id == "MTU0014");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(errorDiagnostics.Select(value => value.Id), Is.EqualTo(new[] { "MTU0014" }));
+            Assert.That(
+                diagnostic.GetMessage(),
+                Is.EqualTo(
+                    "Tagged union target type 'FooOrBar' cannot be used as one of its own case types."
+                )
+            );
+            Assert.That(diagnostic.Location.SourceTree, Is.Not.Null);
+            Assert.That(
+                diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan),
+                Is.EqualTo("FooOrBar")
+            );
+            Assert.That(generatedCodes, Is.Empty);
+        });
+    }
+
+    [Test]
     public void NullableCaseType()
     {
         AssertDiagnostic(

@@ -121,6 +121,15 @@ internal static class TaggedUnionDiagnostics
         isEnabledByDefault: true
     );
 
+    public static readonly DiagnosticDescriptor SelfReferentialCaseTypeRule = new(
+        id: "MTU0014",
+        title: "Target type cannot be used as its own case type",
+        messageFormat: "Tagged union target type '{0}' cannot be used as one of its own case types.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
+
     public static Diagnostic CreateDiagnostic(UnionAnalysisError error)
     {
         return error switch
@@ -154,6 +163,11 @@ internal static class TaggedUnionDiagnostics
                 descriptor: UnsupportedCaseTypeRule,
                 location: value.Location,
                 messageArgs: [value.CaseTypeName, value.TargetTypeName]
+            ),
+            UnionAnalysisError.SelfReferentialCaseType value => Diagnostic.Create(
+                descriptor: SelfReferentialCaseTypeRule,
+                location: value.Location,
+                messageArgs: [value.TargetTypeName]
             ),
             UnionAnalysisError.DuplicateCaseType value => Diagnostic.Create(
                 descriptor: DuplicateCaseTypeRule,

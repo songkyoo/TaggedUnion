@@ -35,6 +35,11 @@ internal abstract record UnionAnalysisError(Location Location)
         string TargetTypeName
     ) : UnionAnalysisError(Location);
 
+    public sealed record SelfReferentialCaseType(
+        Location Location,
+        string TargetTypeName
+    ) : UnionAnalysisError(Location);
+
     public sealed record DuplicateCaseType(
         Location Location,
         string CaseTypeName,

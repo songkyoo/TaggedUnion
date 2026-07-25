@@ -137,6 +137,7 @@ internal static class UnionGenerationModelFactory
         );
         isValid &= ValidateCaseTypes(
             structDeclarationSyntax,
+            targetTypeSymbol,
             caseCandidates,
             errorsBuilder
         );
@@ -594,11 +595,13 @@ internal static class UnionGenerationModelFactory
 
     private static bool ValidateCaseTypes(
         StructDeclarationSyntax structDeclarationSyntax,
+        INamedTypeSymbol targetTypeSymbol,
         ImmutableArray<UnionCaseCandidateContext> candidates,
         ImmutableArray<UnionAnalysisError>.Builder errorsBuilder
     )
     {
         var unsupportedCaseTypes = new List<UnionCaseCandidateContext>();
+        var selfReferentialCaseTypes = new List<UnionCaseCandidateContext>();
         var duplicateCaseTypes = new List<UnionCaseCandidateContext>();
         var invalidCaseParameterNames = new List<UnionCaseCandidateContext>();
         var duplicateCaseParameterNames = new List<UnionCaseCandidateContext>();
@@ -609,11 +612,19 @@ internal static class UnionGenerationModelFactory
         {
             var typeSymbol = candidate.TypeSymbol;
             var isSupportedCaseType = IsSupportedCaseType(typeSymbol);
+            var isSelfReferentialType = SymbolEqualityComparer.Default.Equals(
+                typeSymbol,
+                targetTypeSymbol
+            );
             var isDuplicateType = !knownTypes.Add(typeSymbol);
 
             if (!isSupportedCaseType)
             {
                 unsupportedCaseTypes.Add(candidate);
+            }
+            else if (isSelfReferentialType)
+            {
+                selfReferentialCaseTypes.Add(candidate);
             }
             else if (isDuplicateType)
             {
@@ -641,6 +652,14 @@ internal static class UnionGenerationModelFactory
             errorsBuilder.Add(new UnionAnalysisError.UnsupportedCaseType(
                 Location: candidate.TypeLocation,
                 CaseTypeName: candidate.TypeSymbol.ToDisplayString(MinimallyQualifiedFormat),
+                TargetTypeName: structDeclarationSyntax.Identifier.ToString()
+            ));
+        }
+
+        foreach (var candidate in selfReferentialCaseTypes)
+        {
+            errorsBuilder.Add(new UnionAnalysisError.SelfReferentialCaseType(
+                Location: candidate.TypeLocation,
                 TargetTypeName: structDeclarationSyntax.Identifier.ToString()
             ));
         }
@@ -675,6 +694,7 @@ internal static class UnionGenerationModelFactory
         }
 
         return unsupportedCaseTypes.Count == 0
+            && selfReferentialCaseTypes.Count == 0
             && duplicateCaseTypes.Count == 0
             && invalidCaseParameterNames.Count == 0
             && duplicateCaseParameterNames.Count == 0;

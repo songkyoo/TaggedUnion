@@ -12,7 +12,7 @@ dotnet pack ./TaggedUnion/TaggedUnion.csproj -c Release
 
 ## 사용법
 
-유니온으로 사용할 타입을 `partial struct`로 선언하고 `TaggedUnion` 어트리뷰트를 적용합니다. `partial` 한정자를 생략하면 생성된 선언과 결합할 수 없으므로 컴파일러 오류가 발생합니다. `record struct`는 지원하지 않습니다. 포함될 타입은 `ITaggedUnion<T1, ...>` 인터페이스의 타입 인자로 지정합니다. `TaggedUnion`이 선언되는 타입은 제네릭이 아니어야 하고 인스턴스 생성자를 가질 수 없습니다.
+유니온으로 사용할 타입을 `partial struct`로 선언하고 `TaggedUnion` 어트리뷰트를 적용합니다. `record struct`는 지원하지 않습니다. 포함될 타입은 `ITaggedUnion<T1, ...>` 인터페이스의 타입 인자로 지정하며, 유니온 타입 자기 자신은 케이스 타입으로 지정할 수 없습니다. `TaggedUnion`이 선언되는 타입은 제네릭이 아니어야 하고 인스턴스 생성자를 가질 수 없습니다.
 
 ```csharp
 using Macaron.Union;
