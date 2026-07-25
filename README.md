@@ -12,13 +12,13 @@ dotnet pack ./TaggedUnion/TaggedUnion.csproj -c Release
 
 ## 사용법
 
-유니온으로 사용할 타입을 `readonly partial struct`로 선언하고 `TaggedUnion` 어트리뷰트를 적용합니다. 포함될 타입은 `ITaggedUnion<T1, ...>` 인터페이스의 타입 인자로 지정합니다. `TaggedUnion`이 선언되는 타입은 제네릭이 아니어야 하고 인스턴스 생성자를 가질 수 없습니다.
+유니온으로 사용할 타입을 `partial struct`로 선언하고 `TaggedUnion` 어트리뷰트를 적용합니다. `partial` 한정자를 생략하면 생성된 선언과 결합할 수 없으므로 컴파일러 오류가 발생합니다. `record struct`는 지원하지 않습니다. 포함될 타입은 `ITaggedUnion<T1, ...>` 인터페이스의 타입 인자로 지정합니다. `TaggedUnion`이 선언되는 타입은 제네릭이 아니어야 하고 인스턴스 생성자를 가질 수 없습니다.
 
 ```csharp
 using Macaron.Union;
 
 [TaggedUnion]
-public readonly partial struct IntOrString : ITaggedUnion<int, string>
+public partial struct IntOrString : ITaggedUnion<int, string>
 {
 }
 ```
@@ -28,7 +28,7 @@ public readonly partial struct IntOrString : ITaggedUnion<int, string>
 위 코드는 다음과 같은 코드를 생성합니다.(세부 구현은 생략됨)
 
 ```csharp
-partial struct IntOrString : global::System.IEquatable<IntOrString>
+readonly partial struct IntOrString : global::System.IEquatable<IntOrString>
 {
     public static bool operator ==(IntOrString left, IntOrString right);
     public static bool operator !=(IntOrString left, IntOrString right);
@@ -81,7 +81,7 @@ IntOrString text = new("hello");
 
 ```csharp
 [TaggedUnion(GenerateConversionOperators = true)]
-public readonly partial struct IntOrString : ITaggedUnion<int, string>
+public partial struct IntOrString : ITaggedUnion<int, string>
 {
 }
 
@@ -151,7 +151,7 @@ var result = number.Match(
 ```csharp
 [TaggedUnion]
 [TaggedUnionCase(typeof(Failure), paramName: "error")]
-public readonly partial struct Result : ITaggedUnion<Success, Failure>
+public partial struct Result : ITaggedUnion<Success, Failure>
 {
 }
 ```

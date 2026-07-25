@@ -4,10 +4,10 @@ namespace Macaron.Union;
 
 internal static class TaggedUnionDiagnostics
 {
-    public static readonly DiagnosticDescriptor TargetTypeMustBeReadOnlyPartialStructRule = new(
+    public static readonly DiagnosticDescriptor TargetTypeCannotBeRecordStructRule = new(
         id: "MTU0001",
-        title: "Target type must be a readonly partial struct",
-        messageFormat: "Tagged union target type '{0}' must be declared as a readonly partial struct.",
+        title: "Target type cannot be a record struct",
+        messageFormat: "Tagged union target type '{0}' cannot be declared as a record struct.",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
@@ -125,8 +125,8 @@ internal static class TaggedUnionDiagnostics
     {
         return error switch
         {
-            UnionAnalysisError.TargetTypeMustBeReadOnlyPartialStruct value => Diagnostic.Create(
-                descriptor: TargetTypeMustBeReadOnlyPartialStructRule,
+            UnionAnalysisError.TargetTypeCannotBeRecordStruct value => Diagnostic.Create(
+                descriptor: TargetTypeCannotBeRecordStructRule,
                 location: value.Location,
                 messageArgs: [value.TargetTypeName]
             ),

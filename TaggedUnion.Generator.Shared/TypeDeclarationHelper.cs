@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 using static Microsoft.CodeAnalysis.SymbolDisplayFormat;
 
@@ -7,6 +9,13 @@ namespace Macaron.Union;
 
 internal static class TypeDeclarationHelper
 {
+    public static bool IsStructTypeDeclarationSyntax(SyntaxNode syntaxNode)
+    {
+        return syntaxNode is StructDeclarationSyntax
+            || syntaxNode is RecordDeclarationSyntax recordDeclarationSyntax
+                && recordDeclarationSyntax.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword);
+    }
+
     public static ImmutableArray<INamedTypeSymbol> GetContainingTypes(INamedTypeSymbol typeSymbol)
     {
         var containingTypes = new List<INamedTypeSymbol>();

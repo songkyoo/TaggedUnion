@@ -4,7 +4,7 @@ namespace Macaron.Union;
 
 internal abstract record UnionAnalysisError(Location Location)
 {
-    public sealed record TargetTypeMustBeReadOnlyPartialStruct(
+    public sealed record TargetTypeCannotBeRecordStruct(
         Location Location,
         string TargetTypeName
     ) : UnionAnalysisError(Location);

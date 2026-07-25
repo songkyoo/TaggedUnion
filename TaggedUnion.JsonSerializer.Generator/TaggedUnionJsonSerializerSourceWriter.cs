@@ -48,7 +48,7 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter(UnionGenerationModel
         var unionTypeName = model.TypeName;
 
         AppendLine($"[global::System.Text.Json.Serialization.JsonConverter(typeof({unionTypeName}.JsonConverter))]");
-        AppendLine($"partial struct {unionTypeName}");
+        AppendLine($"readonly partial struct {unionTypeName}");
         AppendLine("{");
 
         IncreaseIndent();

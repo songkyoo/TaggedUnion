@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using static Macaron.Union.HintNameHelper;
 using static Macaron.Union.StringHelper;
 using static Macaron.Union.TypeDeclarationHelper;
-using static Microsoft.CodeAnalysis.CSharp.SyntaxKind;
 using static Microsoft.CodeAnalysis.SpecialType;
 using static Microsoft.CodeAnalysis.SymbolDisplayFormat;
 using static Microsoft.CodeAnalysis.SymbolDisplayMiscellaneousOptions;
@@ -41,7 +40,21 @@ internal static class UnionGenerationModelFactory
         CancellationToken cancellationToken
     )
     {
-        var structDeclarationSyntax = (StructDeclarationSyntax)context.TargetNode;
+        if (context.TargetNode is RecordDeclarationSyntax recordDeclarationSyntax)
+        {
+            return new AnalysisResult.Failure(
+                new UnionAnalysisError.TargetTypeCannotBeRecordStruct(
+                    Location: recordDeclarationSyntax.GetLocation(),
+                    TargetTypeName: recordDeclarationSyntax.Identifier.ToString()
+                )
+            );
+        }
+
+        if (context.TargetNode is not StructDeclarationSyntax structDeclarationSyntax)
+        {
+            return AnalysisResult.Failure.Empty;
+        }
+
         var targetTypeSymbol = context.TargetSymbol as INamedTypeSymbol;
 
         if (targetTypeSymbol == null)
@@ -508,18 +521,7 @@ internal static class UnionGenerationModelFactory
         ImmutableArray<UnionAnalysisError>.Builder errorsBuilder
     )
     {
-        var modifiers = structDeclarationSyntax.Modifiers;
         var targetTypeName = structDeclarationSyntax.Identifier.ToString();
-
-        if (!modifiers.Any(ReadOnlyKeyword) || !modifiers.Any(PartialKeyword))
-        {
-            errorsBuilder.Add(new UnionAnalysisError.TargetTypeMustBeReadOnlyPartialStruct(
-                Location: structDeclarationSyntax.GetLocation(),
-                TargetTypeName: targetTypeName
-            ));
-
-            return false;
-        }
 
         if (structDeclarationSyntax.TypeParameterList != null)
         {

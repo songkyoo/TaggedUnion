@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
 using static Macaron.Union.TaggedUnionMetadataNames;
+using static Macaron.Union.TypeDeclarationHelper;
 
 namespace Macaron.Union;
 
@@ -84,7 +85,7 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
             .SyntaxProvider
             .ForAttributeWithMetadataName(
                 fullyQualifiedMetadataName: TaggedUnionJsonSerializerAttributeMetadataName,
-                predicate: static (syntaxNode, _) => syntaxNode is StructDeclarationSyntax,
+                predicate: static (syntaxNode, _) => IsStructTypeDeclarationSyntax(syntaxNode),
                 transform: CreateAnalysisResult
             )
             .WithTrackingName(nameof(AnalysisResult));

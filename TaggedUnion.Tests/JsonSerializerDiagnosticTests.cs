@@ -17,7 +17,7 @@ public sealed class JsonSerializerDiagnosticTests
 
                 [TaggedUnion]
                 [TaggedUnionJsonSerializer]
-                public partial struct Foo : ITaggedUnion<int, string>
+                public readonly partial record struct Foo : ITaggedUnion<int, string>
                 {
                 }
                 """,

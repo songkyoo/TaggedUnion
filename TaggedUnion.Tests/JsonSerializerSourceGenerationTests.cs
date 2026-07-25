@@ -18,7 +18,7 @@ public sealed class JsonSerializerSourceGenerationTests
             [TaggedUnion]
             [TaggedUnionCase(typeof(string), tag: 42)]
             [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo : ITaggedUnion<int, string>
+            public partial struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
@@ -33,6 +33,7 @@ public sealed class JsonSerializerSourceGenerationTests
         var expectedFragments = new[]
         {
             "[global::System.Text.Json.Serialization.JsonConverter(typeof(Foo.JsonConverter))]",
+            "readonly partial struct Foo",
             "private sealed class JsonConverter : global::System.Text.Json.Serialization.JsonConverter<Foo>",
             "public override bool HandleNull => true;",
             "if (reader.TokenType == global::System.Text.Json.JsonTokenType.Null)",

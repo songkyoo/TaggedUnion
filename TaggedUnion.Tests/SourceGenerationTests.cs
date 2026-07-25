@@ -1,3 +1,5 @@
+using Microsoft.CodeAnalysis;
+
 using static Macaron.Union.Tests.Helper;
 
 namespace Macaron.Union.Tests;
@@ -26,6 +28,102 @@ public sealed class SourceGenerationTests
     }
 
     [Test]
+    public void GeneratedDeclarationMakesTargetTypeReadonly()
+    {
+        var (compilation, driver) = CreateCompilationAndDriver(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public partial struct Foo : ITaggedUnion<int, string>
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
+            assemblyName: "Macaron.TaggedUnion.Tests",
+            generators: [new TaggedUnionGenerator().AsSourceGenerator()]
+        );
+
+        var updatedDriver = driver.RunGeneratorsAndUpdateCompilation(
+            compilation,
+            out var outputCompilation,
+            out var generatorDiagnostics
+        );
+        var errorDiagnostics = outputCompilation
+            .GetDiagnostics()
+            .Concat(generatorDiagnostics)
+            .Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .ToArray();
+        var generatedCode = updatedDriver
+            .GetRunResult()
+            .Results
+            .Single()
+            .GeneratedSources
+            .Single()
+            .SourceText
+            .ToString();
+        var targetType = outputCompilation.GetTypeByMetadataName("Macaron.Union.Tests.Foo");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                errorDiagnostics,
+                Is.Empty,
+                string.Join(Environment.NewLine, errorDiagnostics.Select(diagnostic => diagnostic.ToString()))
+            );
+            Assert.That(targetType, Is.Not.Null);
+            Assert.That(targetType!.IsReadOnly, Is.True);
+            Assert.That(generatedCode, Does.Contain("readonly partial struct Foo"));
+        });
+    }
+
+    [Test]
+    public void TargetTypeWithoutPartialReportsCompilerDiagnostic()
+    {
+        var (compilation, driver) = CreateCompilationAndDriver(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public struct Foo : ITaggedUnion<int, string>
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
+            assemblyName: "Macaron.TaggedUnion.Tests",
+            generators: [new TaggedUnionGenerator().AsSourceGenerator()]
+        );
+
+        var updatedDriver = driver.RunGeneratorsAndUpdateCompilation(
+            compilation,
+            out var outputCompilation,
+            out var generatorDiagnostics
+        );
+        var errorDiagnosticIds = outputCompilation
+            .GetDiagnostics()
+            .Concat(generatorDiagnostics)
+            .Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .Select(diagnostic => diagnostic.Id)
+            .ToArray();
+        var generatedCode = updatedDriver
+            .GetRunResult()
+            .Results
+            .Single()
+            .GeneratedSources
+            .Single()
+            .SourceText
+            .ToString();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(errorDiagnosticIds, Is.EqualTo(new[] { "CS0260" }));
+            Assert.That(generatedCode, Does.Contain("readonly partial struct Foo"));
+        });
+    }
+
+    [Test]
     public void ReferenceCaseTypes()
     {
         AssertGeneratedCode(
@@ -49,7 +147,7 @@ public sealed class SourceGenerationTests
 
             namespace Macaron.Union.Tests
             {
-                partial struct Foo : global::System.IEquatable<Foo>
+                readonly partial struct Foo : global::System.IEquatable<Foo>
                 {
                     #region Operator Overloads
                     public static bool operator ==(Foo left, Foo right)
@@ -279,7 +377,7 @@ public sealed class SourceGenerationTests
 
             namespace Macaron.Union.Tests
             {
-                partial struct Foo : global::System.IEquatable<Foo>
+                readonly partial struct Foo : global::System.IEquatable<Foo>
                 {
                     #region Types
                     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Explicit)]
@@ -518,7 +616,7 @@ public sealed class SourceGenerationTests
 
             namespace Macaron.Union.Tests
             {
-                partial struct Foo : global::System.IEquatable<Foo>
+                readonly partial struct Foo : global::System.IEquatable<Foo>
                 {
                     #region Operator Overloads
                     public static bool operator ==(Foo left, Foo right)
@@ -754,7 +852,7 @@ public sealed class SourceGenerationTests
 
             namespace Macaron.Union.Tests
             {
-                partial struct Foo : global::System.IEquatable<Foo>
+                readonly partial struct Foo : global::System.IEquatable<Foo>
                 {
                     #region Types
                     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Explicit)]
@@ -1422,7 +1520,7 @@ public sealed class SourceGenerationTests
             Assert.That(
                 generatedCode,
                 Does.Contain(
-                    "partial struct Foo : global::System.IEquatable<Foo>, global::System.Runtime.CompilerServices.IUnion"
+                    "readonly partial struct Foo : global::System.IEquatable<Foo>, global::System.Runtime.CompilerServices.IUnion"
                 )
             );
         });

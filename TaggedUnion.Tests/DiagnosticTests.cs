@@ -6,20 +6,55 @@ namespace Macaron.Union.Tests;
 public sealed class DiagnosticTests
 {
     [Test]
-    public void TargetTypeWithoutReadonly()
+    public void RecordStructTargetType()
     {
-        AssertDiagnostic(
+        var (diagnostics, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode:
             """
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            public partial struct Foo : ITaggedUnion<int, string>
+            public readonly partial record struct Foo : ITaggedUnion<int, string>
             {
             }
             """,
-            expectedDiagnosticId: "MTU0001"
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
         );
+        var errorDiagnostics = diagnostics
+            .Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .ToArray();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(errorDiagnostics.Select(diagnostic => diagnostic.Id), Is.EqualTo(new[] { "MTU0001" }));
+            Assert.That(generatedCodes, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void NonStructTargetTypeUsesCompilerDiagnostic()
+    {
+        var (diagnostics, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public class Foo : ITaggedUnion<int, string>
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+        );
+        var errorDiagnostics = diagnostics
+            .Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .ToArray();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(errorDiagnostics.Select(diagnostic => diagnostic.Id), Is.EqualTo(new[] { "CS0592" }));
+            Assert.That(generatedCodes, Is.Empty);
+        });
     }
 
     [Test]

@@ -147,12 +147,12 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
         if (model.SupportsOfficialUnion)
         {
             AppendLine("[global::System.Runtime.CompilerServices.Union]");
-            AppendLine($"partial struct {unionTypeName} : global::System.IEquatable<{unionTypeName}>, global::System.Runtime.CompilerServices.IUnion");
+            AppendLine($"readonly partial struct {unionTypeName} : global::System.IEquatable<{unionTypeName}>, global::System.Runtime.CompilerServices.IUnion");
 
             return;
         }
 
-        AppendLine($"partial struct {unionTypeName} : global::System.IEquatable<{unionTypeName}>");
+        AppendLine($"readonly partial struct {unionTypeName} : global::System.IEquatable<{unionTypeName}>");
     }
 
     private void WriteOperatorOverloads()
