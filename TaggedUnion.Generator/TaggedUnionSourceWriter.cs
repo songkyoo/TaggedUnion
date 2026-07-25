@@ -1,6 +1,6 @@
 using System.Text;
 
-using static Macaron.Union.UnionCaseGenerationModelHelper;
+using static Macaron.Union.TaggedUnionGeneratedMemberNames;
 using static Macaron.Union.UnionCaseStorageHelper;
 using static Macaron.Union.UnionCaseStorageKind;
 
@@ -220,7 +220,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
         var caseContexts = _caseModels;
 
         AppendLine("#region Fields");
-        AppendLine("private readonly byte _tag;");
+        AppendLine($"private readonly byte {TagField};");
 
         if (caseContexts.Any(x => x.StorageKind == Reference))
         {
@@ -265,7 +265,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
                 AppendLine();
             }
 
-            AppendLine($"{Indent}_tag = {tag};");
+            AppendLine($"{Indent}{TagField} = {tag};");
             AppendLine($"{Indent}{GetValueAccessorString(caseContext)} = value;");
 
             AppendLine("}");
@@ -282,9 +282,9 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
     private void WriteProperties()
     {
         AppendLine("#region Properties");
-        AppendLine("public bool HasValue => _tag != 0;");
+        AppendLine($"public bool HasValue => {TagField} != 0;");
         AppendLine();
-        AppendLine("public object? Value => _tag switch");
+        AppendLine($"public object? Value => {TagField} switch");
         AppendLine("{");
         AppendLine($"{Indent}0 => null,");
 
@@ -293,7 +293,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
             AppendLine($"{Indent}{caseContext.Tag} => {GetValueAccessorString(caseContext)},");
         }
 
-        AppendLine($"{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{_tag}}\"),");
+        AppendLine($"{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{{TagField}}}\"),");
         AppendLine("};");
         AppendLine();
 
@@ -302,7 +302,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
             var caseTypeName = caseContext.FullyQualifiedTypeName;
             var castString = caseContext.StorageKind == Reference ? $"({caseTypeName})" : "";
             var nullForgivingAnnotation = caseContext.StorageKind == Reference ? "!" : "";
-            var propertyName = GetValuePropertyName(caseContext.Tag);
+            var propertyName = GetValueProperty(caseContext.Tag);
 
             AppendLine($"private {caseTypeName} {propertyName} => {castString}{GetValueAccessorString(caseContext)}{nullForgivingAnnotation};");
         }
@@ -317,12 +317,12 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
         AppendLine($"#region IEquatable<{typeName}> Interface");
         AppendLine($"public bool Equals({typeName} other)");
         AppendLine("{");
-        AppendLine($"{Indent}if (_tag != other._tag)");
+        AppendLine($"{Indent}if ({TagField} != other.{TagField})");
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}return false;");
         AppendLine($"{Indent}}}");
         AppendLine();
-        AppendLine($"{Indent}return _tag switch");
+        AppendLine($"{Indent}return {TagField} switch");
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}0 => true,");
 
@@ -331,7 +331,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
             AppendLine(GetComparisonExpression(caseContext));
         }
 
-        AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{_tag}}\"),");
+        AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{{TagField}}}\"),");
         AppendLine($"{Indent}}};");
         AppendLine("}");
         AppendLine("#endregion");
@@ -366,16 +366,16 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
         // GetHashCode
         AppendLine("public override int GetHashCode()");
         AppendLine("{");
-        AppendLine($"{Indent}return _tag switch");
+        AppendLine($"{Indent}return {TagField} switch");
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}0 => 0,");
 
         foreach (var caseContext in _caseModels)
         {
-            AppendLine($"{Indent}{Indent}{caseContext.Tag} => global::System.HashCode.Combine(_tag, {GetValueAccessorString(caseContext)}),");
+            AppendLine($"{Indent}{Indent}{caseContext.Tag} => global::System.HashCode.Combine({TagField}, {GetValueAccessorString(caseContext)}),");
         }
 
-        AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{_tag}}\"),");
+        AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{{TagField}}}\"),");
         AppendLine($"{Indent}}};");
         AppendLine("}");
         AppendLine();
@@ -383,7 +383,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
         // ToString
         AppendLine("public override string ToString()");
         AppendLine("{");
-        AppendLine($"{Indent}return _tag switch");
+        AppendLine($"{Indent}return {TagField} switch");
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}0 => \"<Uninitialized>\",");
 
@@ -392,7 +392,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
             AppendLine($"{Indent}{Indent}{caseContext.Tag} => $\"{{{GetValueAccessorString(caseContext)}}}\",");
         }
 
-        AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{_tag}}\"),");
+        AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{{TagField}}}\"),");
         AppendLine($"{Indent}}};");
         AppendLine("}");
 
@@ -417,7 +417,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
 
             AppendLine($"public bool TryGetValue({notNullWhenAnnotationString}out {caseTypeName}{nullableAnnotation} value)");
             AppendLine("{");
-            AppendLine($"{Indent}if (_tag != {tag})");
+            AppendLine($"{Indent}if ({TagField} != {tag})");
             AppendLine($"{Indent}{{");
             AppendLine($"{Indent}{Indent}value = default;");
             AppendLine();
@@ -447,7 +447,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
 
         AppendLine(")");
         AppendLine("{");
-        AppendLine($"{Indent}switch (_tag)");
+        AppendLine($"{Indent}switch ({TagField})");
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}case 0: throw new global::System.InvalidOperationException(\"Value not initialized.\");");
 
@@ -462,7 +462,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
             AppendLine($"{Indent}{Indent}case {tag}: {paramName}({castString}{GetValueAccessorString(caseContext)}{nullForgivingAnnotation}); return;");
         }
 
-        AppendLine($"{Indent}{Indent}default: throw new global::System.InvalidOperationException($\"Invalid tag: {{_tag}}\");");
+        AppendLine($"{Indent}{Indent}default: throw new global::System.InvalidOperationException($\"Invalid tag: {{{TagField}}}\");");
         AppendLine($"{Indent}}}");
         AppendLine("}");
         AppendLine();
@@ -480,7 +480,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
 
         AppendLine(")");
         AppendLine("{");
-        AppendLine($"{Indent}return _tag switch");
+        AppendLine($"{Indent}return {TagField} switch");
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}0 => throw new global::System.InvalidOperationException(\"Value not initialized.\"),");
 
@@ -494,7 +494,7 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
             AppendLine($"{Indent}{Indent}{caseContext.Tag} => {paramName}({castString}{GetValueAccessorString(caseContext)}{nullForgivingAnnotation}),");
         }
 
-        AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{_tag}}\"),");
+        AppendLine($"{Indent}{Indent}_ => throw new global::System.InvalidOperationException($\"Invalid tag: {{{TagField}}}\"),");
         AppendLine($"{Indent}}};");
         AppendLine("}");
 

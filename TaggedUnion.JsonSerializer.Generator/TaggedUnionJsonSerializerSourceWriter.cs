@@ -1,6 +1,6 @@
 using System.Text;
 
-using static Macaron.Union.UnionCaseGenerationModelHelper;
+using static Macaron.Union.TaggedUnionGeneratedMemberNames;
 
 namespace Macaron.Union;
 
@@ -170,6 +170,7 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter(UnionGenerationModel
     private void WriteWriteMethod()
     {
         var unionTypeName = model.TypeName;
+        var tagFieldAccess = $"value.{TagField}";
 
         AppendLine("public override void Write(");
         AppendLine($"{Indent}global::System.Text.Json.Utf8JsonWriter writer,");
@@ -177,7 +178,7 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter(UnionGenerationModel
         AppendLine($"{Indent}global::System.Text.Json.JsonSerializerOptions options");
         AppendLine(")");
         AppendLine("{");
-        AppendLine($"{Indent}if (value._tag == 0)");
+        AppendLine($"{Indent}if ({tagFieldAccess} == 0)");
         AppendLine($"{Indent}{{");
         AppendLine($"{Indent}{Indent}writer.WriteNullValue();");
         AppendLine();
@@ -185,19 +186,19 @@ internal sealed class TaggedUnionJsonSerializerSourceWriter(UnionGenerationModel
         AppendLine($"{Indent}}}");
         AppendLine();
         AppendLine($"{Indent}writer.WriteStartArray();");
-        AppendLine($"{Indent}writer.WriteNumberValue(value._tag);");
+        AppendLine($"{Indent}writer.WriteNumberValue({tagFieldAccess});");
         AppendLine();
-        AppendLine($"{Indent}switch (value._tag)");
+        AppendLine($"{Indent}switch ({tagFieldAccess})");
         AppendLine($"{Indent}{{");
 
         foreach (var caseContext in model.Cases)
         {
-            var valuePropertyName = GetValuePropertyName(caseContext.Tag);
+            var valuePropertyName = GetValueProperty(caseContext.Tag);
 
             AppendLine($"{Indent}{Indent}case {caseContext.Tag}: global::System.Text.Json.JsonSerializer.Serialize<{caseContext.FullyQualifiedTypeName}>(writer, value.{valuePropertyName}, options); break;");
         }
 
-        AppendLine($"{Indent}{Indent}default: throw new global::System.Text.Json.JsonException($\"Invalid tag: {{value._tag}}\");");
+        AppendLine($"{Indent}{Indent}default: throw new global::System.Text.Json.JsonException($\"Invalid tag: {{{tagFieldAccess}}}\");");
 
         AppendLine($"{Indent}}}");
         AppendLine();
