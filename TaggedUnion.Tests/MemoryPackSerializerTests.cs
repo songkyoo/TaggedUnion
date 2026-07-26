@@ -82,6 +82,12 @@ public sealed class MemoryPackSerializerTests
             public partial struct MemoryPackUnion :
                 ITaggedUnionCases<int, string, global::Macaron.Union.Tests.MemoryPackTestValue>
             {
+                public static bool WasStaticConstructorCalled { get; private set; }
+
+                static partial void StaticConstructor()
+                {
+                    WasStaticConstructorCalled = true;
+                }
             }
 
             public static class MemoryPackUnionOperations
@@ -141,6 +147,15 @@ public sealed class MemoryPackSerializerTests
             Assert.That(bytes, Is.EqualTo(new byte[] { 255 }));
             Assert.That(_unionType.GetProperty("HasValue")!.GetValue(roundTripped), Is.False);
         });
+    }
+
+    [Test]
+    public void CallsStaticConstructorPartialMethod()
+    {
+        Assert.That(
+            _unionType.GetProperty("WasStaticConstructorCalled")!.GetValue(obj: null),
+            Is.True
+        );
     }
 
     [Test]
