@@ -146,7 +146,7 @@ public sealed class TaggedUnionMemoryPackSerializerGenerator : IIncrementalGener
         var diagnosticsBuilder = ImmutableArray.CreateBuilder<Diagnostic>();
         var memoryPackableAttribute = GetMemoryPackableAttribute(targetTypeSymbol);
 
-        if (memoryPackableAttribute != null && !IsNoGenerate(memoryPackableAttribute, compilation))
+        if (memoryPackableAttribute != null)
         {
             diagnosticsBuilder.Add(Diagnostic.Create(
                 descriptor: TaggedUnionMemoryPackSerializerDiagnostics.ExistingMemoryPackSerializationNotSupportedRule,

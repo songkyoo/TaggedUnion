@@ -16,7 +16,7 @@ internal static class TaggedUnionMemoryPackSerializerDiagnostics
     public static readonly DiagnosticDescriptor ExistingMemoryPackSerializationNotSupportedRule = new(
         id: "MTUMP0002",
         title: "TaggedUnionMemoryPackSerializer conflicts with existing MemoryPack serialization",
-        messageFormat: "Target type '{0}' with a TaggedUnionMemoryPackSerializer attribute cannot also generate or implement MemoryPack serialization.",
+        messageFormat: "Target type '{0}' with a TaggedUnionMemoryPackSerializer attribute cannot also have a MemoryPackable attribute or implement IMemoryPackable<T>.",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true

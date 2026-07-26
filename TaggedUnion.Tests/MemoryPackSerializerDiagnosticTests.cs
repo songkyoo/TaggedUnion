@@ -107,7 +107,7 @@ public sealed class MemoryPackSerializerDiagnosticTests
     }
 
     [Test]
-    public void MemoryPackableNoGenerateIsAllowed()
+    public void MemoryPackableNoGenerateConflictsWithSerializerGeneration()
     {
         var (diagnostics, generatedCodes) = Compile(
             """
@@ -124,11 +124,12 @@ public sealed class MemoryPackSerializerDiagnosticTests
             """
         );
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(diagnostics, Is.Empty);
-            Assert.That(generatedCodes, Has.Length.EqualTo(1));
-        });
+        AssertDiagnostic(
+            diagnostics,
+            expectedDiagnosticId: "MTUMP0002",
+            expectedLocationText: "MemoryPackable(GenerateType.NoGenerate)"
+        );
+        Assert.That(generatedCodes, Is.Empty);
     }
 
     [Test]
