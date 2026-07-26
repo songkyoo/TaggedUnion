@@ -10,6 +10,13 @@ dotnet pack ./TaggedUnion/TaggedUnion.csproj -c Release
 
 `./TaggedUnion/bin/Release/` 폴더에 `nupkg` 확장자를 가지는 패키지가 생성됩니다.
 
+Json, MemoryPack에 대한 직렬화 패키지는 각각 다음 명령으로 만들 수 있습니다.
+
+```shell
+dotnet pack ./TaggedUnion.JsonSerializer/TaggedUnion.JsonSerializer.csproj -c Release
+dotnet pack ./TaggedUnion.MemoryPackSerializer/TaggedUnion.MemoryPackSerializer.csproj -c Release
+```
+
 ### 템플릿을 사용하는 코드
 
 `ITaggedUnionCases<T1, ...>`, `ITaggedUnion<T1, ...>`, `TaggedUnion<T1, ...>` 선언은 T4 템플릿에서 생성합니다. 템플릿을 수정한 후 저장소 루트에서 다음 명령을 실행합니다.
@@ -87,7 +94,7 @@ readonly partial struct IntOrString :
 
 ### 범용 TaggedUnion 사용하기
 
-별도의 이름을 가진 유니온 타입이 필요하지 않다면 arity 2부터 8까지 제공되는 `TaggedUnion<T1, ...>` 구조체를 바로 사용할 수 있습니다.
+별도의 이름을 가진 유니온 타입이 필요하지 않거나 필드 레이아웃 최적화가 필요하지 않은 간단한 케이스 타입을 사용하는 경우 `TaggedUnion<T1, ...>` 구조체를 사용할 수 있습니다.
 
 ```csharp
 TaggedUnion<int, string> number = 42;
@@ -103,7 +110,7 @@ if (text.TryGetValue(out string? textValue))
 
 모든 타입 매개변수에는 `notnull` 제약이 적용되며 생성자와 암시적 변환에 `null`을 전달하면 `ArgumentNullException`이 발생합니다. `TaggedUnion<T1, ...>`는 항상 `ITaggedUnion<T1, ...>`을 구현하며, 공식 Union을 지원하는 환경이라면 Union 문법을 사용할 수 있습니다.
 
-### `[TaggedUnion]` 유니온에 포함되는 타입의 제약
+### `ITaggedUnionCases<T1, ...>`에 지정하는 타입의 제약
 
 - 타입은 최소 2개, 최대 8개까지 지정할 수 있습니다.
 - 동일한 타입을 지정할 수 없습니다.
@@ -229,5 +236,80 @@ public partial struct Result : ITaggedUnionCases<Success, Failure>
 [TaggedUnion(StateParamName = "context")]
 public partial struct StateOrFailure : ITaggedUnionCases<State, Failure>
 {
+}
+```
+
+## 직렬화
+
+### JSON 직렬화
+
+`Macaron.TaggedUnion.JsonSerializer` 패키지를 추가하고 유니온 타입에 `TaggedUnionJsonSerializer` 어트리뷰트를 적용하면 `System.Text.Json`에서 사용할 수 있는 `JsonConverter`를 생성합니다. 생성된 컨버터가 자동으로 연결되므로 `JsonSerializerOptions`에 별도로 등록할 필요가 없습니다.
+
+```csharp
+using System.Text.Json;
+using Macaron.Union;
+
+[TaggedUnion]
+[TaggedUnionCase(typeof(string), tag: 42)]
+[TaggedUnionJsonSerializer]
+public partial struct IntOrString : ITaggedUnionCases<int, string>
+{
+}
+
+var value = new IntOrString("hello");
+var json = JsonSerializer.Serialize(value); // [42,"hello"]
+var restored = JsonSerializer.Deserialize<IntOrString>(json);
+```
+
+JSON 형식은 초기화되지 않은 유니온을 나타내는 `null` 또는 정확히 두 원소를 가진 배열 `[tag, value]`입니다.
+
+- 첫 번째 원소는 `byte` 범위의 숫자 tag입니다. `TaggedUnionCase`로 지정한 사용자 정의 tag도 그대로 사용합니다.
+- 두 번째 원소는 해당 case 타입의 값이며, 호출자가 전달한 `JsonSerializerOptions`를 사용하여 직렬화합니다.
+- `default` 유니온을 직렬화하면 `null`을 기록하고, JSON `null`을 역직렬화하면 초기화되지 않은 유니온을 반환합니다.
+- 참조 타입 case의 값은 `null`일 수 없습니다.
+
+`null`이 아닌 값은 반드시 `[tag, value]` 형식이어야 합니다. 배열의 원소 수가 2개가 아니거나, tag가 `byte` 범위의 숫자가 아니거나, `0` 또는 알 수 없는 tag이거나, 참조 타입 case의 값이 `null`이면 `JsonException`이 발생합니다.
+
+### MemoryPack 직렬화
+
+`Macaron.TaggedUnion.MemoryPackSerializer` 패키지를 추가하고 유니온 타입에 `TaggedUnionMemoryPackSerializer` 어트리뷰트를 적용하면 `IMemoryPackable<T>`를 구현하는 코드를 생성합니다. 직렬화는 MemoryPack의 Union 형식을 사용합니다.
+
+```csharp
+using Macaron.Union;
+using MemoryPack;
+
+[MemoryPackable]
+public partial class Foo
+{
+    public int Value { get; set; }
+}
+
+[TaggedUnion]
+[TaggedUnionMemoryPackSerializer]
+public partial struct FooOrInt : ITaggedUnionCases<Foo, int>
+{
+}
+
+var value = new FooOrInt(new Foo { Value = 42 });
+var bytes = MemoryPackSerializer.Serialize(value);
+var restored = MemoryPackSerializer.Deserialize<FooOrInt>(bytes);
+```
+
+케이스 타입이 `IMemoryPackable<TCase>`를 구현한다면 `WritePackable`과 `ReadPackable`을 호출하고 그렇지 않다면 `WriteValue`와 `ReadValue`를 호출합니다.
+
+### TaggedUnionMemoryPackSerializer 어트리뷰트 사용 시의 제약
+
+- 유니온 타입에는 `MemoryPackable` 어트리뷰트를 적용하면 안 됩니다.
+- `MemoryPackable` 어트리뷰트 적용 시와 동일하게 유니온 타입에 명시적인 정적 생성자를 선언할 수 없고 `static partial void StaticConstructor()`를 구현한 경우 해당 메서드를 호출합니다.
+
+```csharp
+[TaggedUnion]
+[TaggedUnionMemoryPackSerializer]
+public partial struct FooOrInt : ITaggedUnionCases<Foo, int>
+{
+    static partial void StaticConstructor()
+    {
+        // 정적 생성자 호출 시 실행될 코드.
+    }
 }
 ```
