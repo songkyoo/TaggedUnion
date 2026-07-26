@@ -80,7 +80,12 @@ public sealed class MemoryPackSerializerTests
             [TaggedUnionCase(typeof(string), tag: 255)]
             [TaggedUnionMemoryPackSerializer]
             public partial struct MemoryPackUnion :
-                ITaggedUnionCases<int, string, global::Macaron.Union.Tests.MemoryPackTestValue>
+                ITaggedUnionCases<
+                    int,
+                    string,
+                    global::Macaron.Union.Tests.MemoryPackTestValue,
+                    global::Macaron.Union.Tests.ManualMemoryPackTestValue
+                >
             {
                 public static bool WasStaticConstructorCalled { get; private set; }
 
@@ -126,6 +131,16 @@ public sealed class MemoryPackSerializerTests
 
         Assert.That(actual, Is.TypeOf<MemoryPackTestValue>());
         Assert.That(((MemoryPackTestValue)actual!).Value, Is.EqualTo(expected.Value));
+    }
+
+    [Test]
+    public void RoundTripsCaseThatImplementsMemoryPackable()
+    {
+        var expected = new ManualMemoryPackTestValue(73);
+        var actual = RoundTrip(expected);
+
+        Assert.That(actual, Is.TypeOf<ManualMemoryPackTestValue>());
+        Assert.That(((ManualMemoryPackTestValue)actual!).Value, Is.EqualTo(expected.Value));
     }
 
     [TestCase(7)]

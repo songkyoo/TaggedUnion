@@ -8,6 +8,55 @@ namespace Macaron.Union.Tests;
 public sealed class MemoryPackSerializerSourceGenerationTests
 {
     [Test]
+    public void SelectsPackableMethodsForCaseThatImplementsMemoryPackable()
+    {
+        var (_, generatedCodes, _, _) =
+            CompileAndGetResults<TaggedUnionMemoryPackSerializerGenerator>(
+                sourceCode:
+                """
+                namespace Macaron.Union.Tests;
+
+                [TaggedUnion]
+                [TaggedUnionMemoryPackSerializer]
+                public partial struct Foo :
+                    ITaggedUnionCases<ManualMemoryPackTestValue, int>
+                {
+                }
+                """,
+                additionalAssemblies:
+                [
+                    typeof(TaggedUnionAttribute).Assembly,
+                    typeof(TaggedUnionMemoryPackSerializerAttribute).Assembly,
+                    typeof(MemoryPackableAttribute).Assembly,
+                    typeof(ManualMemoryPackTestValue).Assembly,
+                ]
+            );
+        var generatedCode = generatedCodes.Single().ReplaceLineEndings();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                generatedCode,
+                Does.Contain("case 1: writer.WritePackable(value.__1); break;")
+            );
+            Assert.That(
+                generatedCode,
+                Does.Contain(
+                    "case 1: value = new Foo(reader.ReadPackable<global::Macaron.Union.Tests.ManualMemoryPackTestValue>()); break;"
+                )
+            );
+            Assert.That(
+                generatedCode,
+                Does.Contain("case 2: writer.WriteValue(value.__2); break;")
+            );
+            Assert.That(
+                generatedCode,
+                Does.Contain("case 2: value = new Foo(reader.ReadValue<int>()); break;")
+            );
+        });
+    }
+
+    [Test]
     public void GeneratesNativeUnionFormatterAndSelectsCaseSerializationMethod()
     {
         var (_, generatedCodes, generatedHintNames, _) =
