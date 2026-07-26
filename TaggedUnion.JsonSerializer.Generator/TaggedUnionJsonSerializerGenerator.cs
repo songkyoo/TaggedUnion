@@ -8,7 +8,7 @@ using static Macaron.Union.TypeDeclarationHelper;
 
 namespace Macaron.Union;
 
-[Generator(LanguageNames.CSharp)]
+[Generator]
 public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
 {
     #region Constants
@@ -74,7 +74,7 @@ public sealed class TaggedUnionJsonSerializerGenerator : IIncrementalGenerator
         var writer = new TaggedUnionJsonSerializerSourceWriter(model);
         var source = writer.Generate();
 
-        return SourceText.From(source, Encoding.UTF8);
+        return SourceText.From(text: source, encoding: Encoding.UTF8);
     }
     #endregion
 

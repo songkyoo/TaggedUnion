@@ -9,7 +9,7 @@ using static Macaron.Union.TypeDeclarationHelper;
 
 namespace Macaron.Union;
 
-[Generator(LanguageNames.CSharp)]
+[Generator]
 public sealed class TaggedUnionGenerator : IIncrementalGenerator
 {
     #region Types
