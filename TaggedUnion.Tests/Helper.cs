@@ -139,7 +139,8 @@ internal static partial class Helper
         bool supportsOfficialUnion
     ) CompileAndGetResults<T>(
         string sourceCode,
-        Assembly[]? additionalAssemblies = null
+        Assembly[]? additionalAssemblies = null,
+        IEnumerable<string>? preprocessorSymbols = null
     ) where T : IIncrementalGenerator, new()
     {
         var generator = new T();
@@ -147,7 +148,8 @@ internal static partial class Helper
             sourceCode,
             additionalAssemblies,
             assemblyName: "Macaron.TaggedUnion.Tests",
-            generators: [generator.AsSourceGenerator()]
+            generators: [generator.AsSourceGenerator()],
+            preprocessorSymbols: preprocessorSymbols
         );
 
         var result = driver.RunGenerators(compilation).GetRunResult().Results.Single();
@@ -167,7 +169,8 @@ internal static partial class Helper
         Assembly[]? additionalAssemblies,
         string assemblyName,
         ISourceGenerator[] generators,
-        GeneratorDriverOptions? driverOptions = null
+        GeneratorDriverOptions? driverOptions = null,
+        IEnumerable<string>? preprocessorSymbols = null
     )
     {
         var references = AppDomain
@@ -179,7 +182,10 @@ internal static partial class Helper
             .Cast<MetadataReference>()
             .ToImmutableArray();
 
-        var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, ParseOptions);
+        var parseOptions = preprocessorSymbols != null
+            ? ParseOptions.WithPreprocessorSymbols(preprocessorSymbols)
+            : ParseOptions;
+        var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, parseOptions);
 
         var compilation = CSharpCompilation.Create(
             assemblyName,
@@ -193,7 +199,7 @@ internal static partial class Helper
         var driver = CSharpGeneratorDriver.Create(
             generators,
             additionalTexts: null,
-            parseOptions: ParseOptions,
+            parseOptions,
             optionsProvider: null,
             driverOptions: driverOptions ?? default
         );

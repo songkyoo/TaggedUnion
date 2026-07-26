@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TaggedUnionVersion>1.1.1</TaggedUnionVersion>
     <TaggedUnionJsonSerializerVersion>1.1.1</TaggedUnionJsonSerializerVersion>
+    <TaggedUnionMemoryPackSerializerVersion>1.1.1</TaggedUnionMemoryPackSerializerVersion>
   </PropertyGroup>
 
 </Project>

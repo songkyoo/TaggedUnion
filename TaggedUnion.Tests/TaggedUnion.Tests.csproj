@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <PackageReference Include="MemoryPack" Version="1.21.4" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.6.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="NUnit" Version="4.2.2" />
@@ -28,6 +29,8 @@
     <ProjectReference Include="..\TaggedUnion.Generator\TaggedUnion.Generator.csproj" />
     <ProjectReference Include="..\TaggedUnion.JsonSerializer\TaggedUnion.JsonSerializer.csproj" />
     <ProjectReference Include="..\TaggedUnion.JsonSerializer.Generator\TaggedUnion.JsonSerializer.Generator.csproj" />
+    <ProjectReference Include="..\TaggedUnion.MemoryPackSerializer\TaggedUnion.MemoryPackSerializer.csproj" />
+    <ProjectReference Include="..\TaggedUnion.MemoryPackSerializer.Generator\TaggedUnion.MemoryPackSerializer.Generator.csproj" />
   </ItemGroup>
 
 </Project>
