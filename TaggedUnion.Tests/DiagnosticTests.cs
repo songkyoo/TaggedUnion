@@ -60,6 +60,42 @@ public sealed class DiagnosticTests
     }
 
     [Test]
+    public void TargetTypeMustBePartial()
+    {
+        var (diagnostics, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public struct Foo : ITaggedUnionCases<int, string>
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+        );
+        var errorDiagnostics = diagnostics
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        var diagnostic = errorDiagnostics.Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(diagnostic.Id, Is.EqualTo("MTU0017"));
+            Assert.That(
+                diagnostic.GetMessage(),
+                Is.EqualTo("Tagged union target type 'Foo' must be declared partial.")
+            );
+            Assert.That(diagnostic.Location.SourceTree, Is.Not.Null);
+            Assert.That(
+                diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan),
+                Is.EqualTo("Foo")
+            );
+            Assert.That(generatedCodes, Is.Empty);
+        });
+    }
+
+    [Test]
     public void GenericTargetType()
     {
         AssertDiagnostic(

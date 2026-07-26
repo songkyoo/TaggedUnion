@@ -9,6 +9,11 @@ internal abstract record UnionAnalysisError(Location Location)
         string TargetTypeName
     ) : UnionAnalysisError(Location);
 
+    public sealed record TargetTypeMustBePartial(
+        Location Location,
+        string TargetTypeName
+    ) : UnionAnalysisError(Location);
+
     public sealed record TargetTypeMustBeNonGeneric(
         Location Location,
         string TargetTypeName

@@ -606,6 +606,17 @@ internal static class UnionGenerationModelFactory
     )
     {
         var targetTypeName = structDeclarationSyntax.Identifier.ToString();
+        var isValid = true;
+
+        if (!structDeclarationSyntax.Modifiers.Any(static modifier => modifier.IsKind(SyntaxKind.PartialKeyword)))
+        {
+            errorsBuilder.Add(new UnionAnalysisError.TargetTypeMustBePartial(
+                Location: structDeclarationSyntax.Identifier.GetLocation(),
+                TargetTypeName: targetTypeName
+            ));
+
+            isValid = false;
+        }
 
         if (structDeclarationSyntax.TypeParameterList != null)
         {
@@ -614,10 +625,10 @@ internal static class UnionGenerationModelFactory
                 TargetTypeName: targetTypeName
             ));
 
-            return false;
+            isValid = false;
         }
 
-        return true;
+        return isValid;
     }
 
     private static bool ValidateTargetTypeMembers(

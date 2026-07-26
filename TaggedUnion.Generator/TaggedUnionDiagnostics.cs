@@ -148,12 +148,26 @@ internal static class TaggedUnionDiagnostics
         isEnabledByDefault: true
     );
 
+    public static readonly DiagnosticDescriptor TargetTypeMustBePartialRule = new(
+        id: "MTU0017",
+        title: "Target type must be partial",
+        messageFormat: "Tagged union target type '{0}' must be declared partial.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
+
     public static Diagnostic CreateDiagnostic(UnionAnalysisError error)
     {
         return error switch
         {
             UnionAnalysisError.TargetTypeCannotBeRecordStruct value => Diagnostic.Create(
                 descriptor: TargetTypeCannotBeRecordStructRule,
+                location: value.Location,
+                messageArgs: [value.TargetTypeName]
+            ),
+            UnionAnalysisError.TargetTypeMustBePartial value => Diagnostic.Create(
+                descriptor: TargetTypeMustBePartialRule,
                 location: value.Location,
                 messageArgs: [value.TargetTypeName]
             ),

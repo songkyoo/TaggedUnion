@@ -92,51 +92,6 @@ public sealed class SourceGenerationTests
     }
 
     [Test]
-    public void TargetTypeWithoutPartialReportsCompilerDiagnostic()
-    {
-        var (compilation, driver) = CreateCompilationAndDriver(
-            sourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            public struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """,
-            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
-            assemblyName: "Macaron.TaggedUnion.Tests",
-            generators: [new TaggedUnionGenerator().AsSourceGenerator()]
-        );
-
-        var updatedDriver = driver.RunGeneratorsAndUpdateCompilation(
-            compilation,
-            out var outputCompilation,
-            out var generatorDiagnostics
-        );
-        var errorDiagnosticIds = outputCompilation
-            .GetDiagnostics()
-            .Concat(generatorDiagnostics)
-            .Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
-            .Select(diagnostic => diagnostic.Id)
-            .ToArray();
-        var generatedCode = updatedDriver
-            .GetRunResult()
-            .Results
-            .Single()
-            .GeneratedSources
-            .Single()
-            .SourceText
-            .ToString();
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(errorDiagnosticIds, Is.EqualTo(new[] { "CS0260" }));
-            Assert.That(generatedCode, Does.Contain("readonly partial struct Foo"));
-        });
-    }
-
-    [Test]
     public void ReferenceCaseTypes()
     {
         AssertGeneratedCode(
