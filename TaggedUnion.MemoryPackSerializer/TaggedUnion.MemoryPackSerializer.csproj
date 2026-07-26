@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TaggedUnion\TaggedUnion.csproj" PrivateAssets="all" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\TaggedUnion\TaggedUnion.csproj" BuildReference="false" PrivateAssets="none" />
     <ProjectReference Include="..\TaggedUnion.MemoryPackSerializer.Generator\TaggedUnion.MemoryPackSerializer.Generator.csproj" PrivateAssets="all" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
