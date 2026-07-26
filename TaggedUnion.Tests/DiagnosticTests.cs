@@ -96,6 +96,51 @@ public sealed class DiagnosticTests
     }
 
     [Test]
+    public void ConversionOperatorsCannotBeGeneratedForInterfaceCases()
+    {
+        var (diagnostics, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public interface IQux
+            {
+            }
+
+            public interface IBar
+            {
+            }
+
+            [TaggedUnion(GenerateConversionOperators = true)]
+            public readonly partial struct Foo : ITaggedUnionCases<IQux, IBar>
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
+        );
+        var diagnostic = diagnostics
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(diagnostic.Id, Is.EqualTo("MTU0018"));
+            Assert.That(
+                diagnostic.GetMessage(),
+                Is.EqualTo(
+                    "GenerateConversionOperators cannot be enabled for tagged union target type 'Foo' because the following case types are interfaces: Macaron.Union.Tests.IQux, Macaron.Union.Tests.IBar."
+                )
+            );
+            Assert.That(diagnostic.Location.SourceTree, Is.Not.Null);
+            Assert.That(
+                diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan),
+                Is.EqualTo("true")
+            );
+            Assert.That(generatedCodes, Has.Length.EqualTo(1));
+        });
+    }
+
+    [Test]
     public void GenericTargetType()
     {
         AssertDiagnostic(

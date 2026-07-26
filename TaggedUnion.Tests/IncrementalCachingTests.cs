@@ -12,6 +12,7 @@ public sealed class IncrementalCachingTests
 {
     #region Constants
     private const string AnalysisResultTrackingName = "AnalysisResult";
+    private const string AnalysisDiagnosticTrackingName = "TaggedUnionAnalysisDiagnostic";
     private const string ModelTrackingName = "UnionGenerationModel";
     private const string OfficialUnionSupportTrackingName = "OfficialUnionSupport";
     private const string SourceGenerationModelTrackingName = "TaggedUnionSourceGenerationModel";
@@ -79,6 +80,43 @@ public sealed class IncrementalCachingTests
                 typeof(TaggedUnionJsonSerializerAttribute).Assembly,
                 typeof(JsonSerializer).Assembly,
             ]
+        );
+    }
+
+    [Test]
+    public void TaggedUnionGeneratorCachesSourceOutputWhenOnlyAnalysisDiagnosticsChange()
+    {
+        AssertSourceOutputRunReasons(
+            generator: new TaggedUnionGenerator(),
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public interface ICase
+            {
+            }
+
+            [TaggedUnion]
+            public readonly partial struct Foo : ITaggedUnionCases<ICase, string>
+            {
+            }
+            """,
+            updatedSourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public interface ICase
+            {
+            }
+
+            [TaggedUnion(GenerateConversionOperators = true)]
+            public readonly partial struct Foo : ITaggedUnionCases<ICase, string>
+            {
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
+            assertOfficialUnionSupportCaching: true,
+            expectAnalysisDiagnosticChange: true
         );
     }
 
@@ -295,7 +333,8 @@ public sealed class IncrementalCachingTests
         string updatedSourceCode,
         Assembly[] additionalAssemblies,
         bool assertOfficialUnionSupportCaching = false,
-        bool expectModelChange = false
+        bool expectModelChange = false,
+        bool expectAnalysisDiagnosticChange = false
     )
     {
         var (compilation, driver) = Helper.CreateCompilationAndDriver(
@@ -320,6 +359,9 @@ public sealed class IncrementalCachingTests
 
         var result = trackingDriver.GetRunResult().Results.Single();
         var analysisResultReasons = GetRunReasons(result.TrackedSteps, AnalysisResultTrackingName);
+        var analysisDiagnosticReasons = expectAnalysisDiagnosticChange
+            ? GetRunReasons(result.TrackedSteps, AnalysisDiagnosticTrackingName)
+            : [];
         var modelReasons = GetRunReasons(result.TrackedSteps, ModelTrackingName);
         var officialUnionSupportReasons = assertOfficialUnionSupportCaching
             ? GetRunReasons(result.TrackedSteps, OfficialUnionSupportTrackingName)
@@ -342,6 +384,7 @@ public sealed class IncrementalCachingTests
                 Is.EqualTo(new[]
                 {
                     expectModelChange
+                        || expectAnalysisDiagnosticChange
                         ? IncrementalStepRunReason.Modified
                         : IncrementalStepRunReason.Unchanged,
                 })
@@ -352,9 +395,19 @@ public sealed class IncrementalCachingTests
                 {
                     expectModelChange
                         ? IncrementalStepRunReason.Modified
+                        : expectAnalysisDiagnosticChange
+                            ? IncrementalStepRunReason.Unchanged
                         : IncrementalStepRunReason.Cached,
                 })
             );
+
+            if (expectAnalysisDiagnosticChange)
+            {
+                Assert.That(
+                    analysisDiagnosticReasons,
+                    Is.EqualTo(new[] { IncrementalStepRunReason.Modified })
+                );
+            }
 
             if (assertOfficialUnionSupportCaching)
             {
@@ -373,13 +426,18 @@ public sealed class IncrementalCachingTests
                 );
             }
 
-            if (expectModelChange)
+            if (expectModelChange || expectAnalysisDiagnosticChange)
             {
                 Assert.That(
                     outputReasons,
                     Does.Contain(IncrementalStepRunReason.Modified)
                         .Or.Contain(IncrementalStepRunReason.New)
                 );
+
+                if (expectAnalysisDiagnosticChange)
+                {
+                    Assert.That(outputReasons, Does.Contain(IncrementalStepRunReason.Cached));
+                }
             }
             else
             {

@@ -1625,9 +1625,9 @@ public sealed class SourceGenerationTests
     }
 
     [Test]
-    public void InterfaceCaseTypeDoesNotGenerateConversionOperators()
+    public void InterfaceCaseTypePreventsAllCaseConversionOperators()
     {
-        var (_, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
+        var (diagnostics, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode:
             """
             namespace Macaron.Union.Tests;
@@ -1648,6 +1648,12 @@ public sealed class SourceGenerationTests
         Assert.Multiple(() =>
         {
             Assert.That(
+                diagnostics
+                    .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+                    .Select(diagnostic => diagnostic.Id),
+                Is.EqualTo(new[] { "MTU0018" })
+            );
+            Assert.That(
                 generatedCode,
                 Does.Not.Contain("implicit operator Foo(global::Macaron.Union.Tests.IQux value)")
             );
@@ -1655,8 +1661,14 @@ public sealed class SourceGenerationTests
                 generatedCode,
                 Does.Not.Contain("explicit operator global::Macaron.Union.Tests.IQux(Foo value)")
             );
-            Assert.That(generatedCode, Does.Contain("implicit operator Foo(string value)"));
-            Assert.That(generatedCode, Does.Contain("explicit operator string(Foo value)"));
+            Assert.That(generatedCode, Does.Not.Contain("implicit operator Foo(string value)"));
+            Assert.That(generatedCode, Does.Not.Contain("explicit operator string(Foo value)"));
+            Assert.That(
+                generatedCode,
+                Does.Contain(
+                    "public static implicit operator global::Macaron.Union.TaggedUnion<global::Macaron.Union.Tests.IQux, string>(Foo value)"
+                )
+            );
         });
     }
 

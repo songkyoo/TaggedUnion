@@ -17,8 +17,56 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
     {
         public sealed record Success(
             UnionGenerationModel Model,
-            bool GenerateConversionOperators
-        ) : TaggedUnionAnalysisResult;
+            bool GenerateConversionOperators,
+            ImmutableArray<TaggedUnionAnalysisDiagnostic> Diagnostics
+        ) : TaggedUnionAnalysisResult
+        {
+            #region IEquatable<Success> Interface
+            public bool Equals(Success? other)
+            {
+                if (ReferenceEquals(this, other))
+                {
+                    return true;
+                }
+
+                if (other is null)
+                {
+                    return false;
+                }
+
+                Diagnostics.SequenceEqual(other.Diagnostics, EqualityComparer<TaggedUnionAnalysisDiagnostic>.Default);
+
+                return EqualityComparer<UnionGenerationModel>.Default.Equals(Model, other.Model)
+                    && GenerateConversionOperators == other.GenerateConversionOperators
+                    && Diagnostics.SequenceEqual(
+                        items: other.Diagnostics,
+                        comparer: EqualityComparer<TaggedUnionAnalysisDiagnostic>.Default
+                    );
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = EqualityComparer<UnionGenerationModel>.Default.GetHashCode(Model);
+
+                    hashCode = (hashCode * 397) ^ GenerateConversionOperators.GetHashCode();
+
+                    if (Diagnostics.IsDefault)
+                    {
+                        return (hashCode * 397) ^ -1;
+                    }
+
+                    foreach (var diagnostic in Diagnostics)
+                    {
+                        hashCode = (hashCode * 397) ^ EqualityComparer<TaggedUnionAnalysisDiagnostic>.Default.GetHashCode(diagnostic);
+                    }
+
+                    return hashCode;
+                }
+            }
+            #endregion
+        }
 
         public sealed record Failure(
             ImmutableArray<UnionAnalysisError> Errors
@@ -41,13 +89,64 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
 
         return result switch
         {
-            AnalysisResult.Success success => new TaggedUnionAnalysisResult.Success(
-                Model: success.Model,
-                GenerateConversionOperators: ConversionOperatorGenerationPolicy.IsEnabled(taggedUnionAttribute)
+            AnalysisResult.Success success => CreateSuccessResult(
+                model: success.Model,
+                taggedUnionAttribute,
+                cancellationToken
             ),
             AnalysisResult.Failure failure => new TaggedUnionAnalysisResult.Failure(failure.Errors),
             _ => throw new InvalidOperationException($"Invalid analysis result: {result}"),
         };
+
+        #region Local Functions
+        static TaggedUnionAnalysisResult.Success CreateSuccessResult(
+            UnionGenerationModel model,
+            AttributeData taggedUnionAttribute,
+            CancellationToken cancellationToken
+        )
+        {
+            var generateConversionOperators = ConversionOperatorGenerationPolicy.IsEnabled(taggedUnionAttribute);
+
+            if (!generateConversionOperators)
+            {
+                return new TaggedUnionAnalysisResult.Success(
+                    Model: model,
+                    GenerateConversionOperators: false,
+                    Diagnostics: ImmutableArray<TaggedUnionAnalysisDiagnostic>.Empty
+                );
+            }
+
+            var interfaceCaseTypeNames = model
+                .Cases
+                .Where(static x => x.IsInterfaceType)
+                .Select(static x => x.FullyQualifiedTypeName.Replace("global::", ""))
+                .ToArray();
+
+            if (interfaceCaseTypeNames.Length == 0)
+            {
+                return new TaggedUnionAnalysisResult.Success(
+                    Model: model,
+                    GenerateConversionOperators: true,
+                    Diagnostics: ImmutableArray<TaggedUnionAnalysisDiagnostic>.Empty
+                );
+            }
+
+            var diagnostic = new TaggedUnionAnalysisDiagnostic.ConversionOperatorsNotSupportedForInterfaceCases(
+                Location: ConversionOperatorGenerationPolicy.GetOptionLocation(
+                    taggedUnionAttribute,
+                    cancellationToken
+                ),
+                TargetTypeName: model.TypeName,
+                InterfaceCaseTypeNames: string.Join(", ", interfaceCaseTypeNames)
+            );
+
+            return new TaggedUnionAnalysisResult.Success(
+                Model: model,
+                GenerateConversionOperators: false,
+                Diagnostics: ImmutableArray.Create<TaggedUnionAnalysisDiagnostic>(diagnostic)
+            );
+        }
+        #endregion
     }
 
     private static Diagnostic? CreateMissingTaggedUnionAttributeDiagnostic(
@@ -127,6 +226,10 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 SupportsOfficialUnion: pair.Right
             ))
             .WithTrackingName(nameof(TaggedUnionSourceGenerationModel));
+        var analysisDiagnosticProvider = analysisResultProvider
+            .Where(static x => x is TaggedUnionAnalysisResult.Success)
+            .Select(static (x, _) => ((TaggedUnionAnalysisResult.Success)x).Diagnostics)
+            .WithTrackingName(nameof(TaggedUnionAnalysisDiagnostic));
 
         context.RegisterSourceOutput(
             source: analysisResultProvider
@@ -137,6 +240,18 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 foreach (var error in errors)
                 {
                     sourceProductionContext.ReportDiagnostic(TaggedUnionDiagnostics.CreateDiagnostic(error));
+                }
+            }
+        );
+        context.RegisterSourceOutput(
+            source: analysisDiagnosticProvider,
+            action: static (sourceProductionContext, diagnostics) =>
+            {
+                foreach (var diagnostic in diagnostics)
+                {
+                    sourceProductionContext.ReportDiagnostic(
+                        TaggedUnionDiagnostics.CreateDiagnostic(diagnostic)
+                    );
                 }
             }
         );

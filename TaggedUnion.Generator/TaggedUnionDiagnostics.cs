@@ -157,6 +157,29 @@ internal static class TaggedUnionDiagnostics
         isEnabledByDefault: true
     );
 
+    public static readonly DiagnosticDescriptor ConversionOperatorsNotSupportedForInterfaceCasesRule = new(
+        id: "MTU0018",
+        title: "Conversion operators cannot be generated for interface cases",
+        messageFormat: "GenerateConversionOperators cannot be enabled for tagged union target type '{0}' because the following case types are interfaces: {1}.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
+
+    public static Diagnostic CreateDiagnostic(TaggedUnionAnalysisDiagnostic diagnostic)
+    {
+        return diagnostic switch
+        {
+            TaggedUnionAnalysisDiagnostic.ConversionOperatorsNotSupportedForInterfaceCases value =>
+                Diagnostic.Create(
+                    descriptor: ConversionOperatorsNotSupportedForInterfaceCasesRule,
+                    location: value.Location,
+                    messageArgs: [value.TargetTypeName, value.InterfaceCaseTypeNames]
+                ),
+            _ => throw new ArgumentOutOfRangeException(nameof(diagnostic)),
+        };
+    }
+
     public static Diagnostic CreateDiagnostic(UnionAnalysisError error)
     {
         return error switch

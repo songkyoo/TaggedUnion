@@ -127,7 +127,7 @@ var number = new IntOrString(42);
 IntOrString text = new("hello");
 ```
 
-### 캐스팅 연산자 생성하기
+#### 캐스팅 연산자
 
 `TaggedUnion` 어트리뷰트의 `GenerateConversionOperators`를 `true`로 지정하면 각 타입에서 유니온 타입으로의 암시적 캐스팅과 유니온 타입에서 각 타입으로의 명시적 캐스팅을 생성합니다.
 
@@ -141,7 +141,7 @@ IntOrString number = 42;
 IntOrString text = "hello";
 var value = (int)number;
 ```
-인터페이스 타입은 C# 언어 제약으로 인해 이 옵션을 활성화해도 캐스팅 연산자를 생성하지 않습니다.
+인터페이스 타입은 C# 언어 제약으로 인해 사용자 정의 변환 연산자를 지원하지 않습니다. 인터페이스 케이스가 있는 유니온에서 이 옵션을 활성화하면 `MTU0018` 오류가 발생합니다.
 
 `GenerateConversionOperators` 옵션과 관계없이 생성된 유니온과 같은 케이스 목록의 범용 `TaggedUnion<T1, ...>` 사이에는 양방향 암시적 변환이 항상 생성됩니다. 초기화되지 값은 상대 타입의 `default` 값으로 변환됩니다.
 

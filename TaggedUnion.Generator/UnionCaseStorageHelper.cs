@@ -19,10 +19,7 @@ internal static class UnionCaseStorageHelper
         return new UnionCaseSourceGenerationModel(
             StorageKind: storageKind,
             IsInterfaceType: model.IsInterfaceType,
-            SupportsConversionOperators: ConversionOperatorGenerationPolicy.SupportsCase(
-                model,
-                generateConversionOperators
-            ),
+            SupportsConversionOperators: generateConversionOperators,
             FullyQualifiedTypeName: model.FullyQualifiedTypeName,
             ParamName: model.ParamName,
             Tag: model.Tag

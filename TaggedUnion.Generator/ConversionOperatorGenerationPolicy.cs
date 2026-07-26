@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Macaron.Union;
 
@@ -18,9 +19,25 @@ internal static class ConversionOperatorGenerationPolicy
         });
     }
 
-    public static bool SupportsCase(UnionCaseGenerationModel model, bool generateConversionOperators)
+    public static Location GetOptionLocation(
+        AttributeData taggedUnionAttribute,
+        CancellationToken cancellationToken
+    )
     {
-        return generateConversionOperators && !model.IsInterfaceType;
+        var attributeSyntax = taggedUnionAttribute
+            .ApplicationSyntaxReference?
+            .GetSyntax(cancellationToken) as AttributeSyntax;
+        var argument = attributeSyntax?
+            .ArgumentList?
+            .Arguments
+            .FirstOrDefault(argument =>
+            {
+                return argument.NameEquals?.Name.Identifier.ValueText == GenerateConversionOperatorsProperty;
+            });
+
+        return argument?.Expression.GetLocation()
+            ?? attributeSyntax?.GetLocation()
+            ?? Location.None;
     }
     #endregion
 }
