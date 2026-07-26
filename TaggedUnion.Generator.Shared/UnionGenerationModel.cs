@@ -24,25 +24,29 @@ internal sealed record UnionGenerationModel(
             return false;
         }
 
-        return StringComparer.Ordinal.Equals(Namespace, other.Namespace)
-            && SequenceEqual(ContainingTypes, other.ContainingTypes, StringComparer.Ordinal)
-            && StringComparer.Ordinal.Equals(TypeName, other.TypeName)
-            && StringComparer.Ordinal.Equals(StateParamName, other.StateParamName)
-            && SequenceEqual(Cases, other.Cases, EqualityComparer<UnionCaseGenerationModel>.Default)
-            && StringComparer.Ordinal.Equals(HintName, other.HintName);
+        var stringComparer = StringComparer.Ordinal;
+
+        return stringComparer.Equals(Namespace, other.Namespace)
+            && ContainingTypes.SequenceEqual(other.ContainingTypes, stringComparer)
+            && stringComparer.Equals(TypeName, other.TypeName)
+            && stringComparer.Equals(StateParamName, other.StateParamName)
+            && Cases.SequenceEqual(other.Cases, EqualityComparer<UnionCaseGenerationModel>.Default)
+            && stringComparer.Equals(HintName, other.HintName);
     }
 
     public override int GetHashCode()
     {
+        var stringComparer = StringComparer.Ordinal;
+
         unchecked
         {
-            var hashCode = StringComparer.Ordinal.GetHashCode(Namespace);
+            var hashCode = stringComparer.GetHashCode(Namespace);
 
-            hashCode = AddValuesHashCode(hashCode, ContainingTypes, StringComparer.Ordinal);
-            hashCode = (hashCode * 397) ^ StringComparer.Ordinal.GetHashCode(TypeName);
-            hashCode = (hashCode * 397) ^ StringComparer.Ordinal.GetHashCode(StateParamName);
+            hashCode = AddValuesHashCode(hashCode, ContainingTypes, stringComparer);
+            hashCode = (hashCode * 397) ^ stringComparer.GetHashCode(TypeName);
+            hashCode = (hashCode * 397) ^ stringComparer.GetHashCode(StateParamName);
             hashCode = AddValuesHashCode(hashCode, Cases, EqualityComparer<UnionCaseGenerationModel>.Default);
-            hashCode = (hashCode * 397) ^ StringComparer.Ordinal.GetHashCode(HintName);
+            hashCode = (hashCode * 397) ^ stringComparer.GetHashCode(HintName);
 
             return hashCode;
         }
@@ -50,29 +54,6 @@ internal sealed record UnionGenerationModel(
     #endregion
 
     #region Static Methods
-    private static bool SequenceEqual<T>(ImmutableArray<T> x, ImmutableArray<T> y, IEqualityComparer<T> comparer)
-    {
-        if (x.IsDefault || y.IsDefault)
-        {
-            return x.IsDefault == y.IsDefault;
-        }
-
-        if (x.Length != y.Length)
-        {
-            return false;
-        }
-
-        for (var i = 0; i < x.Length; i++)
-        {
-            if (!comparer.Equals(x[i], y[i]))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     private static int AddValuesHashCode<T>(int hashCode, ImmutableArray<T> values, IEqualityComparer<T> comparer)
     {
         unchecked

@@ -219,17 +219,6 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
             .CompilationProvider
             .Select(static (compilation, _) => OfficialUnionSupport.IsAvailable(compilation))
             .WithTrackingName(nameof(OfficialUnionSupport));
-        var sourceGenerationModelProvider = unionGenerationModelProvider
-            .Combine(supportsOfficialUnionProvider)
-            .Select(static (pair, _) => new TaggedUnionSourceGenerationModel(
-                Model: pair.Left,
-                SupportsOfficialUnion: pair.Right
-            ))
-            .WithTrackingName(nameof(TaggedUnionSourceGenerationModel));
-        var analysisDiagnosticProvider = analysisResultProvider
-            .Where(static x => x is TaggedUnionAnalysisResult.Success)
-            .Select(static (x, _) => ((TaggedUnionAnalysisResult.Success)x).Diagnostics)
-            .WithTrackingName(nameof(TaggedUnionAnalysisDiagnostic));
 
         context.RegisterSourceOutput(
             source: analysisResultProvider
@@ -244,19 +233,26 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
             }
         );
         context.RegisterSourceOutput(
-            source: analysisDiagnosticProvider,
+            source: analysisResultProvider
+                .Where(static x => x is TaggedUnionAnalysisResult.Success)
+                .Select(static (x, _) => ((TaggedUnionAnalysisResult.Success)x).Diagnostics)
+                .WithTrackingName(nameof(TaggedUnionAnalysisDiagnostic)),
             action: static (sourceProductionContext, diagnostics) =>
             {
                 foreach (var diagnostic in diagnostics)
                 {
-                    sourceProductionContext.ReportDiagnostic(
-                        TaggedUnionDiagnostics.CreateDiagnostic(diagnostic)
-                    );
+                    sourceProductionContext.ReportDiagnostic(TaggedUnionDiagnostics.CreateDiagnostic(diagnostic));
                 }
             }
         );
         context.RegisterSourceOutput(
-            source: sourceGenerationModelProvider,
+            source: unionGenerationModelProvider
+                .Combine(supportsOfficialUnionProvider)
+                .Select(static (pair, _) => new TaggedUnionSourceGenerationModel(
+                    Model: pair.Left,
+                    SupportsOfficialUnion: pair.Right
+                ))
+                .WithTrackingName(nameof(TaggedUnionSourceGenerationModel)),
             action: static (sourceProductionContext, model) =>
             {
                 var hintName = $"{model.HintName}.g.cs";
@@ -267,18 +263,16 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         );
 
         // TaggedUnionCase만 있는 경우의 진단
-        var missingTaggedUnionAttributeDiagnosticProvider = context
-            .SyntaxProvider
-            .ForAttributeWithMetadataName(
-                fullyQualifiedMetadataName: TaggedUnionCaseAttribute,
-                predicate: static (syntaxNode, _) => syntaxNode is StructDeclarationSyntax,
-                transform: CreateMissingTaggedUnionAttributeDiagnostic
-            )
-            .Where(static diagnostic => diagnostic != null)
-            .Select(static (diagnostic, _) => diagnostic!);
-
         context.RegisterSourceOutput(
-            source: missingTaggedUnionAttributeDiagnosticProvider,
+            source: context
+                .SyntaxProvider
+                .ForAttributeWithMetadataName(
+                    fullyQualifiedMetadataName: TaggedUnionCaseAttribute,
+                    predicate: static (syntaxNode, _) => syntaxNode is StructDeclarationSyntax,
+                    transform: CreateMissingTaggedUnionAttributeDiagnostic
+                )
+                .Where(static diagnostic => diagnostic != null)
+                .Select(static (diagnostic, _) => diagnostic!),
             action: static (sourceProductionContext, diagnostic) =>
             {
                 sourceProductionContext.ReportDiagnostic(diagnostic);
