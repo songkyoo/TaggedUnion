@@ -30,40 +30,13 @@ public sealed class MemoryPackSerializerTests
             preprocessorSymbols: ["NET7_0_OR_GREATER"]
         );
 
-        driver.RunGeneratorsAndUpdateCompilation(
-            compilation,
-            out var outputCompilation,
-            out var generatorDiagnostics
-        );
-
-        var errorDiagnostics = outputCompilation
-            .GetDiagnostics()
-            .Concat(generatorDiagnostics)
-            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-            .ToArray();
-
-        Assert.That(
-            errorDiagnostics,
-            Is.Empty,
-            string.Join(Environment.NewLine, errorDiagnostics.Select(diagnostic => diagnostic.ToString()))
-        );
-
-        using var stream = new MemoryStream();
-        var emitResult = outputCompilation.Emit(stream);
-
-        Assert.That(
-            emitResult.Success,
-            Is.True,
-            string.Join(Environment.NewLine, emitResult.Diagnostics.Select(diagnostic => diagnostic.ToString()))
-        );
-
-        return Assembly.Load(stream.ToArray());
+        return EmitGeneratedAssembly(compilation, driver);
     }
     #endregion
 
     #region Fields
-    private MethodInfo _deserializeMethod = null!;
-    private MethodInfo _serializeMethod = null!;
+    private Func<byte[], ITaggedUnion> _deserialize = null!;
+    private Func<ITaggedUnion, byte[]> _serialize = null!;
     private Type _unionType = null!;
     #endregion
 
@@ -97,12 +70,12 @@ public sealed class MemoryPackSerializerTests
 
             public static class MemoryPackUnionOperations
             {
-                public static byte[] Serialize(MemoryPackUnion value)
+                public static byte[] Serialize(ITaggedUnion value)
                 {
-                    return global::MemoryPack.MemoryPackSerializer.Serialize<MemoryPackUnion>(value);
+                    return global::MemoryPack.MemoryPackSerializer.Serialize((MemoryPackUnion)value);
                 }
 
-                public static MemoryPackUnion Deserialize(byte[] bytes)
+                public static ITaggedUnion Deserialize(byte[] bytes)
                 {
                     return global::MemoryPack.MemoryPackSerializer.Deserialize<MemoryPackUnion>(bytes);
                 }
@@ -119,8 +92,8 @@ public sealed class MemoryPackSerializerTests
             throwOnError: true
         )!;
 
-        _serializeMethod = operationsType.GetMethod("Serialize")!;
-        _deserializeMethod = operationsType.GetMethod("Deserialize")!;
+        _serialize = operationsType.GetMethod("Serialize")!.CreateDelegate<Func<ITaggedUnion, byte[]>>();
+        _deserialize = operationsType.GetMethod("Deserialize")!.CreateDelegate<Func<byte[], ITaggedUnion>>();
     }
 
     [Test]
@@ -143,25 +116,24 @@ public sealed class MemoryPackSerializerTests
         Assert.That(((ManualMemoryPackTestValue)actual!).Value, Is.EqualTo(expected.Value));
     }
 
-    [TestCase(7)]
-    [TestCase("hello")]
-    public void RoundTripsValueCases(object expected)
+    [Test]
+    public void RoundTripsIntCase()
     {
-        Assert.That(RoundTrip(expected), Is.EqualTo(expected));
+        Assert.That(RoundTrip(7), Is.EqualTo(7));
     }
 
     [Test]
     public void SerializesDefaultAsNullUnion()
     {
-        var value = Activator.CreateInstance(_unionType)!;
-        var bytes = Serialize(value);
-        var roundTripped = Deserialize(bytes);
+        var value = (ITaggedUnion)Activator.CreateInstance(_unionType)!;
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(bytes, Is.EqualTo(new byte[] { 255 }));
-            Assert.That(_unionType.GetProperty("HasValue")!.GetValue(roundTripped), Is.False);
-        });
+        Assert.That(_serialize(value), Is.EqualTo(new byte[] { 255 }));
+    }
+
+    [Test]
+    public void DeserializesNullUnionHeaderAsDefault()
+    {
+        Assert.That(_deserialize([255]).HasValue, Is.False);
     }
 
     [Test]
@@ -176,45 +148,23 @@ public sealed class MemoryPackSerializerTests
     [Test]
     public void UsesWideNativeUnionHeaderForTag255()
     {
-        var value = CreateUnion("hello");
-        var bytes = Serialize(value);
+        var bytes = _serialize(CreateUnion("hello"));
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
-            Assert.That(bytes[0], Is.EqualTo(250));
-            Assert.That(bytes[1], Is.EqualTo(255));
-            Assert.That(bytes[2], Is.EqualTo(0));
-            Assert.That(
-                _unionType.GetProperty("Value")!.GetValue(Deserialize(bytes)),
-                Is.EqualTo("hello")
-            );
-        });
+            Assert.That(bytes.Take(3), Is.EqualTo(new byte[] { 250, 255, 0 }));
+            Assert.That(_deserialize(bytes).Value, Is.EqualTo("hello"));
+        }
     }
 
-    private object CreateUnion(object value)
+    private ITaggedUnion CreateUnion(object value)
     {
-        var constructor = _unionType.GetConstructor([value.GetType()])!;
-
-        return constructor.Invoke([value]);
-    }
-
-    private object Deserialize(byte[] bytes)
-    {
-        return _deserializeMethod.Invoke(obj: null, parameters: [bytes])!;
+        return (ITaggedUnion)Activator.CreateInstance(_unionType, value)!;
     }
 
     private object? RoundTrip(object value)
     {
-        var union = CreateUnion(value);
-        var bytes = Serialize(union);
-        var roundTripped = Deserialize(bytes);
-
-        return _unionType.GetProperty("Value")!.GetValue(roundTripped);
-    }
-
-    private byte[] Serialize(object value)
-    {
-        return (byte[])_serializeMethod.Invoke(obj: null, parameters: [value])!;
+        return _deserialize(_serialize(CreateUnion(value))).Value;
     }
     #endregion
 }

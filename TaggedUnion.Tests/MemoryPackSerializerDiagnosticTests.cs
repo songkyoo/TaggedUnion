@@ -7,58 +7,32 @@ namespace Macaron.Union.Tests;
 public sealed class MemoryPackSerializerDiagnosticTests
 {
     #region Tests
-    [Test]
-    public void MemoryPackSerializerAttributeWithoutTaggedUnionAttribute()
+    [TestCase("MemoryPackable")]
+    [TestCase("MemoryPackable(GenerateType.NoGenerate)")]
+    public void MemoryPackableAttributeConflictsWithSerializerGeneration(string attribute)
     {
-        var (diagnostics, generatedCodes) = Compile(
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnionMemoryPackSerializer]
-            public partial struct Foo
-            {
-            }
-            """
-        );
-
-        AssertDiagnostic(
-            diagnostics,
-            expectedDiagnosticId: "MTUMP0001",
-            expectedLocationText: "TaggedUnionMemoryPackSerializer"
-        );
-        Assert.That(generatedCodes, Is.Empty);
-    }
-
-    [Test]
-    public void MemoryPackableAttributeConflictsWithSerializerGeneration()
-    {
-        var (diagnostics, generatedCodes) = Compile(
-            """
+        AssertRejected(
+            $$"""
             using MemoryPack;
 
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            [MemoryPackable]
+            [{{attribute}}]
             [TaggedUnionMemoryPackSerializer]
             public partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
-            """
-        );
-
-        AssertDiagnostic(
-            diagnostics,
+            """,
             expectedDiagnosticId: "MTUMP0002",
-            expectedLocationText: "MemoryPackable"
+            expectedLocationText: attribute
         );
-        Assert.That(generatedCodes, Is.Empty);
     }
 
     [Test]
     public void ExistingMemoryPackableInterfaceConflictsWithSerializerGeneration()
     {
-        var (diagnostics, generatedCodes) = Compile(
+        AssertRejected(
             """
             namespace Macaron.Union.Tests;
 
@@ -69,21 +43,16 @@ public sealed class MemoryPackSerializerDiagnosticTests
                 global::MemoryPack.IMemoryPackable<Foo>
             {
             }
-            """
-        );
-
-        AssertDiagnostic(
-            diagnostics,
+            """,
             expectedDiagnosticId: "MTUMP0002",
             expectedLocationText: "global::MemoryPack.IMemoryPackable<Foo>"
         );
-        Assert.That(generatedCodes, Is.Empty);
     }
 
     [Test]
     public void StaticConstructorConflictsWithSerializerGeneration()
     {
-        var (diagnostics, generatedCodes) = Compile(
+        AssertRejected(
             """
             namespace Macaron.Union.Tests;
 
@@ -95,88 +64,16 @@ public sealed class MemoryPackSerializerDiagnosticTests
                 {
                 }
             }
-            """
-        );
-
-        AssertDiagnostic(
-            diagnostics,
+            """,
             expectedDiagnosticId: "MTUMP0003",
             expectedLocationText: "Foo"
         );
-        Assert.That(generatedCodes, Is.Empty);
     }
 
-    [Test]
-    public void MemoryPackableNoGenerateConflictsWithSerializerGeneration()
-    {
-        var (diagnostics, generatedCodes) = Compile(
-            """
-            using MemoryPack;
-
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            [MemoryPackable(GenerateType.NoGenerate)]
-            [TaggedUnionMemoryPackSerializer]
-            public partial struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """
-        );
-
-        AssertDiagnostic(
-            diagnostics,
-            expectedDiagnosticId: "MTUMP0002",
-            expectedLocationText: "MemoryPackable(GenerateType.NoGenerate)"
-        );
-        Assert.That(generatedCodes, Is.Empty);
-    }
-
-    [Test]
-    public void MemoryPackSerializerGeneratorDoesNotReportTaggedUnionDiagnostics()
-    {
-        var (diagnostics, generatedCodes) = Compile(
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            [TaggedUnionMemoryPackSerializer]
-            public readonly partial record struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """
-        );
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(diagnostics, Is.Empty);
-            Assert.That(generatedCodes, Is.Empty);
-        });
-    }
     #endregion
 
     #region Static Methods
-    private static void AssertDiagnostic(
-        Diagnostic[] diagnostics,
-        string expectedDiagnosticId,
-        string expectedLocationText
-    )
-    {
-        Assert.That(
-            diagnostics.Select(diagnostic => diagnostic.Id),
-            Is.EqualTo(new[] { expectedDiagnosticId })
-        );
-
-        var diagnostic = diagnostics.Single();
-
-        Assert.That(diagnostic.Location.SourceTree, Is.Not.Null);
-        Assert.That(
-            diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan),
-            Is.EqualTo(expectedLocationText)
-        );
-    }
-
-    private static (Diagnostic[] diagnostics, string[] generatedCodes) Compile(string sourceCode)
+    private static void AssertRejected(string sourceCode, string expectedDiagnosticId, string expectedLocationText)
     {
         var (diagnostics, generatedCodes, _, _) =
             Helper.CompileAndGetResults<TaggedUnionMemoryPackSerializerGenerator>(
@@ -188,14 +85,12 @@ public sealed class MemoryPackSerializerDiagnosticTests
                     typeof(MemoryPackableAttribute).Assembly,
                 ]
             );
-        var memoryPackDiagnostics = diagnostics
-            .Where(diagnostic =>
-                diagnostic.Severity == DiagnosticSeverity.Error
-                && diagnostic.Id.StartsWith("MTUMP", StringComparison.Ordinal)
-            )
-            .ToArray();
+        var memoryPackDiagnostics = diagnostics.Where(diagnostic =>
+            diagnostic.Severity == DiagnosticSeverity.Error && diagnostic.Id.StartsWith("MTUMP", StringComparison.Ordinal)
+        );
 
-        return (memoryPackDiagnostics, generatedCodes);
+        Helper.AssertDiagnosticLocationText(memoryPackDiagnostics, expectedDiagnosticId, expectedLocationText);
+        Assert.That(generatedCodes, Is.Empty);
     }
     #endregion
 }

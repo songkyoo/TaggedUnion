@@ -7,57 +7,11 @@ namespace Macaron.Union.Tests;
 [TestFixture]
 public sealed class MemoryPackSerializerSourceGenerationTests
 {
-    [Test]
-    public void SelectsPackableMethodsForCaseThatImplementsMemoryPackable()
-    {
-        var (_, generatedCodes, _, _) =
-            CompileAndGetResults<TaggedUnionMemoryPackSerializerGenerator>(
-                sourceCode:
-                """
-                namespace Macaron.Union.Tests;
+    private string _generatedCode = null!;
+    private string[] _hintNames = null!;
 
-                [TaggedUnion]
-                [TaggedUnionMemoryPackSerializer]
-                public partial struct Foo :
-                    ITaggedUnionCases<ManualMemoryPackTestValue, int>
-                {
-                }
-                """,
-                additionalAssemblies:
-                [
-                    typeof(TaggedUnionAttribute).Assembly,
-                    typeof(TaggedUnionMemoryPackSerializerAttribute).Assembly,
-                    typeof(MemoryPackableAttribute).Assembly,
-                    typeof(ManualMemoryPackTestValue).Assembly,
-                ]
-            );
-        var generatedCode = generatedCodes.Single().ReplaceLineEndings();
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(
-                generatedCode,
-                Does.Contain("case 1: writer.WritePackable(value.__1); break;")
-            );
-            Assert.That(
-                generatedCode,
-                Does.Contain(
-                    "case 1: value = new Foo(reader.ReadPackable<global::Macaron.Union.Tests.ManualMemoryPackTestValue>()); break;"
-                )
-            );
-            Assert.That(
-                generatedCode,
-                Does.Contain("case 2: writer.WriteValue(value.__2); break;")
-            );
-            Assert.That(
-                generatedCode,
-                Does.Contain("case 2: value = new Foo(reader.ReadValue<int>()); break;")
-            );
-        });
-    }
-
-    [Test]
-    public void GeneratesNativeUnionFormatterAndSelectsCaseSerializationMethod()
+    [OneTimeSetUp]
+    public void SetUp()
     {
         var (_, generatedCodes, generatedHintNames, _) =
             CompileAndGetResults<TaggedUnionMemoryPackSerializerGenerator>(
@@ -79,7 +33,7 @@ public sealed class MemoryPackSerializerSourceGenerationTests
                 [TaggedUnion]
                 [TaggedUnionMemoryPackSerializer]
                 public partial struct Foo :
-                    ITaggedUnionCases<PackableCase, int, NoGenerateCase>
+                    ITaggedUnionCases<PackableCase, int, NoGenerateCase, ManualMemoryPackTestValue>
                 {
                 }
                 """,
@@ -88,43 +42,55 @@ public sealed class MemoryPackSerializerSourceGenerationTests
                     typeof(TaggedUnionAttribute).Assembly,
                     typeof(TaggedUnionMemoryPackSerializerAttribute).Assembly,
                     typeof(MemoryPackableAttribute).Assembly,
+                    typeof(ManualMemoryPackTestValue).Assembly,
                 ]
             );
-        var generatedCode = generatedCodes.Single().ReplaceLineEndings();
-        var expectedFragments = new[]
-        {
+        _generatedCode = generatedCodes.Single();
+        _hintNames = generatedHintNames;
+    }
+
+    [Test]
+    public void HintNameIsStable()
+    {
+        Assert.That(_hintNames, Is.EqualTo(new[] { "Foo_0.ba8c0e3e.MemoryPackSerializer.g.cs" }));
+    }
+
+    [Test]
+    public void RegistersFormattersForBothTargetFrameworkPaths()
+    {
+        AssertContainsFragments(
+            _generatedCode,
             "readonly partial struct Foo : global::MemoryPack.IMemoryPackable<Foo>",
             "static void global::MemoryPack.IMemoryPackFormatterRegister.RegisterFormatter()",
             "public static void RegisterFormatter()",
             "global::MemoryPack.MemoryPackFormatterProvider.Register<Foo>();",
             "global::MemoryPack.MemoryPackFormatterProvider.Register(new MemoryPackFormatter());",
+            "private sealed class MemoryPackFormatter : global::MemoryPack.MemoryPackFormatter<Foo>"
+        );
+    }
+
+    [Test]
+    public void UsesNativeUnionHeaders()
+    {
+        AssertContainsFragments(
+            _generatedCode,
             "writer.WriteNullUnionHeader();",
             "writer.WriteUnionHeader(value._tag);",
-            "case 1: writer.WritePackable(value.__1); break;",
-            "case 2: writer.WriteValue(value.__2); break;",
-            "case 3: writer.WriteValue(value.__3); break;",
             "if (!reader.TryReadUnionHeader(out var tag))",
-            "case 1: value = new Foo(reader.ReadPackable<global::Macaron.Union.Tests.PackableCase>()",
-            "case 2: value = new Foo(reader.ReadValue<int>()); break;",
-            "case 3: value = new Foo(reader.ReadValue<global::Macaron.Union.Tests.NoGenerateCase>()",
-            "global::MemoryPack.MemoryPackSerializationException.ThrowInvalidTag(tag, typeof(Foo));",
-            "private sealed class MemoryPackFormatter : global::MemoryPack.MemoryPackFormatter<Foo>",
-        };
+            "global::MemoryPack.MemoryPackSerializationException.ThrowInvalidTag(tag, typeof(Foo));"
+        );
+    }
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(
-                generatedHintNames,
-                Is.EqualTo(new[] { "Foo_0.ba8c0e3e.MemoryPackSerializer.g.cs" })
-            );
-
-            foreach (var expectedFragment in expectedFragments)
-            {
-                Assert.That(
-                    actual: generatedCode,
-                    expression: Does.Contain(expectedFragment.ReplaceLineEndings())
-                );
-            }
-        });
+    [TestCase(1, "Packable", "global::Macaron.Union.Tests.PackableCase")]
+    [TestCase(2, "Value", "int")]
+    [TestCase(3, "Value", "global::Macaron.Union.Tests.NoGenerateCase")]
+    [TestCase(4, "Packable", "global::Macaron.Union.Tests.ManualMemoryPackTestValue")]
+    public void SelectsReadAndWriteMethodsForEachCase(int tag, string methodSuffix, string caseType)
+    {
+        AssertContainsFragments(
+            _generatedCode,
+            $"case {tag}: writer.Write{methodSuffix}(value.__{tag}); break;",
+            $"case {tag}: value = new Foo(reader.Read{methodSuffix}<{caseType}>()"
+        );
     }
 }

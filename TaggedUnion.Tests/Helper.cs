@@ -22,20 +22,23 @@ internal static partial class Helper
     ]
     private static partial Regex UnionDeclarationRegex { get; }
 
-    public static void AssertGeneratedCode(string sourceCode, int sourceIndex, string expected)
+    public static void AssertGeneratedCode(string sourceCode, string expected)
     {
-        var (_, generatedCodes, _, supportsOfficialUnion) = CompileAndGetResults<TaggedUnionGenerator>(
+        var (diagnostics, generatedCodes, _, supportsOfficialUnion) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
         );
+
+        AssertNoErrors(diagnostics);
+
         var expectedCode = ApplyOfficialUnionDeclaration(expected, supportsOfficialUnion);
 
         Assert.That(
-            actual: generatedCodes[sourceIndex].ReplaceLineEndings(),
+            actual: generatedCodes.Single().ReplaceLineEndings(),
             expression: Is.EqualTo(expectedCode.ReplaceLineEndings())
         );
 
-        #region Local Funcitons
+        #region Local Functions
         static string ApplyOfficialUnionDeclaration(string expectedCode, bool supportsOfficialUnion)
         {
             if (!supportsOfficialUnion)
@@ -54,35 +57,49 @@ internal static partial class Helper
         #endregion
     }
 
-    public static void AssertGeneratedCode(string sourceCode, string expected)
+    public static void AssertGeneratedCodeContains(string sourceCode, params string[] expectedFragments)
     {
-        AssertGeneratedCode(sourceCode, sourceIndex: 0, expected);
-    }
-
-    public static void AssertGeneratedCodeContains(
-        string sourceCode,
-        int sourceIndex,
-        params string[] expectedFragments
-    )
-    {
-        var (_, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
+        var (diagnostics, generatedCodes, _, _) = CompileAndGetResults<TaggedUnionGenerator>(
             sourceCode,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
         );
-        var generatedCode = generatedCodes[sourceIndex].ReplaceLineEndings();
 
-        foreach (var expectedFragment in expectedFragments)
+        AssertNoErrors(diagnostics);
+        AssertContainsFragments(generatedCodes.Single(), expectedFragments);
+    }
+
+    public static void AssertContainsFragments(string generatedCode, params string[] expectedFragments)
+    {
+        var normalizedCode = generatedCode.ReplaceLineEndings("\n");
+
+        using (Assert.EnterMultipleScope())
         {
-            Assert.That(
-                actual: generatedCode,
-                expression: Does.Contain(expectedFragment.ReplaceLineEndings())
-            );
+            foreach (var fragment in expectedFragments)
+            {
+                Assert.That(normalizedCode, Does.Contain(fragment.ReplaceLineEndings("\n")));
+            }
         }
     }
 
-    public static void AssertGeneratedCodeContains(string sourceCode, params string[] expectedFragments)
+    public static void AssertNoErrors(IEnumerable<Diagnostic> diagnostics)
     {
-        AssertGeneratedCodeContains(sourceCode, sourceIndex: 0, expectedFragments);
+        var errors = diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
+
+        Assert.That(errors, Is.Empty, string.Join<Diagnostic>(Environment.NewLine, errors));
+    }
+
+    public static Assembly EmitGeneratedAssembly(Compilation compilation, GeneratorDriver driver)
+    {
+        driver.RunGeneratorsAndUpdateCompilation(compilation, out var output, out var generatorDiagnostics);
+
+        AssertNoErrors(generatorDiagnostics);
+
+        using var stream = new MemoryStream();
+        var result = output.Emit(stream);
+
+        Assert.That(result.Success, Is.True, string.Join(Environment.NewLine, result.Diagnostics));
+
+        return Assembly.Load(stream.ToArray());
     }
 
     public static void AssertDiagnostic(string sourceCode, string expectedDiagnosticId)
@@ -114,22 +131,27 @@ internal static partial class Helper
             sourceCode,
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly]
         );
-        var errorDiagnostics = diagnostics
-            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-            .ToArray();
-        var actualDiagnosticIds = errorDiagnostics
-            .Select(diagnostic => diagnostic.Id)
-            .ToArray();
 
-        Assert.That(actualDiagnosticIds, Is.EquivalentTo(new[] { expectedDiagnosticId }));
-
-        var diagnostic = errorDiagnostics.Single(diagnostic => diagnostic.Id == expectedDiagnosticId);
-
-        Assert.That(diagnostic.Location.SourceTree, Is.Not.Null);
-        Assert.That(
-            actual: diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan),
-            expression: Is.EqualTo(expectedLocationText)
+        AssertDiagnosticLocationText(
+            diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error),
+            expectedDiagnosticId,
+            expectedLocationText
         );
+    }
+
+    public static void AssertDiagnosticLocationText(
+        IEnumerable<Diagnostic> diagnostics,
+        string expectedDiagnosticId,
+        string expectedLocationText
+    )
+    {
+        var actual = diagnostics.ToArray();
+
+        Assert.That(actual.Select(diagnostic => diagnostic.Id), Is.EqualTo(new[] { expectedDiagnosticId }));
+
+        var location = actual.Single().Location;
+
+        Assert.That(location.SourceTree?.GetText().ToString(location.SourceSpan), Is.EqualTo(expectedLocationText));
     }
 
     public static (
@@ -156,7 +178,6 @@ internal static partial class Helper
         var generatedSources = result.GeneratedSources;
         var generatedCodes = generatedSources.Select(source => source.SourceText.ToString()).ToArray();
         var generatedHintNames = generatedSources.Select(source => source.HintName).ToArray();
-
         var allDiagnostics = compilation.GetDiagnostics()
             .Concat(result.Diagnostics)
             .ToImmutableArray();

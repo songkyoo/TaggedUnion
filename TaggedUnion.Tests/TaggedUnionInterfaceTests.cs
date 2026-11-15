@@ -24,60 +24,47 @@ public sealed class TaggedUnionInterfaceTests
         });
     }
 
-    [Test]
-    public void GenericContractsContainCaseSpecificTryGetValueMembers()
+    [TestCase(typeof(ITaggedUnion<,>))]
+    [TestCase(typeof(ITaggedUnion<,,>))]
+    [TestCase(typeof(ITaggedUnion<,,,>))]
+    [TestCase(typeof(ITaggedUnion<,,,,>))]
+    [TestCase(typeof(ITaggedUnion<,,,,,>))]
+    [TestCase(typeof(ITaggedUnion<,,,,,,>))]
+    [TestCase(typeof(ITaggedUnion<,,,,,,,>))]
+    public void GenericContractsContainCaseSpecificTryGetValueMembers(Type contractType)
     {
-        Type[] contractTypes =
-        [
-            typeof(ITaggedUnion<,>),
-            typeof(ITaggedUnion<,,>),
-            typeof(ITaggedUnion<,,,>),
-            typeof(ITaggedUnion<,,,,>),
-            typeof(ITaggedUnion<,,,,,>),
-            typeof(ITaggedUnion<,,,,,,>),
-            typeof(ITaggedUnion<,,,,,,,>),
-        ];
+        var caseTypes = contractType.GetGenericArguments();
+        var inheritedInterfaces = contractType.GetInterfaces();
+        var tryGetValueMethods = contractType
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(method => method.Name == nameof(ITaggedUnion<int, string>.TryGetValue))
+            .ToArray();
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
-            foreach (var contractType in contractTypes)
+            Assert.That(inheritedInterfaces, Does.Contain(typeof(ITaggedUnion)));
+            Assert.That(
+                inheritedInterfaces,
+                Has.None.Matches<Type>(
+                    type => type.IsGenericType
+                        && type.GetGenericTypeDefinition().Name.StartsWith("ITaggedUnionCases`", StringComparison.Ordinal)
+                )
+            );
+            Assert.That(tryGetValueMethods, Has.Length.EqualTo(caseTypes.Length));
+
+            foreach (var method in tryGetValueMethods)
             {
-                var arity = contractType.GetGenericArguments().Length;
-                var inheritedInterfaces = contractType.GetInterfaces();
-                var tryGetValueMethods = contractType
-                    .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-                    .Where(method => method.Name == nameof(ITaggedUnion<int, string>.TryGetValue))
-                    .ToArray();
-
+                var parameters = method.GetParameters();
+                var parameter = parameters.Length == 1 ? parameters[0] : null;
+                Assert.That(method.ReturnType, Is.EqualTo(typeof(bool)), method.ToString());
+                Assert.That(parameters, Has.Length.EqualTo(1), method.ToString());
+                Assert.That(parameter?.IsOut, Is.True, method.ToString());
                 Assert.That(
-                    inheritedInterfaces,
-                    Has.Some.EqualTo(typeof(ITaggedUnion)),
-                    contractType.FullName
+                    parameter?.GetCustomAttribute<NotNullWhenAttribute>()?.ReturnValue,
+                    Is.True,
+                    method.ToString()
                 );
-                Assert.That(
-                    inheritedInterfaces,
-                    Has.None.Matches<Type>(
-                        type => type.IsGenericType
-                            && type.GetGenericTypeDefinition().Name.StartsWith("ITaggedUnionCases`")
-                    ),
-                    contractType.FullName
-                );
-                Assert.That(tryGetValueMethods, Has.Length.EqualTo(arity), contractType.FullName);
-
-                foreach (var method in tryGetValueMethods)
-                {
-                    var parameters = method.GetParameters();
-
-                    Assert.That(method.ReturnType, Is.EqualTo(typeof(bool)), method.ToString());
-                    Assert.That(parameters, Has.Length.EqualTo(1), method.ToString());
-                    Assert.That(parameters[0].IsOut, Is.True, method.ToString());
-                    Assert.That(
-                        parameters[0].GetCustomAttribute<NotNullWhenAttribute>()?.ReturnValue,
-                        Is.True,
-                        method.ToString()
-                    );
-                }
             }
-        });
+        }
     }
 }

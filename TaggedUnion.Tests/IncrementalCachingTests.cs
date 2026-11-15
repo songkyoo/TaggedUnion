@@ -16,6 +16,18 @@ public sealed class IncrementalCachingTests
     private const string ModelTrackingName = "UnionGenerationModel";
     private const string OfficialUnionSupportTrackingName = "OfficialUnionSupport";
     private const string SourceGenerationModelTrackingName = "TaggedUnionSourceGenerationModel";
+    private const string AddedMember = "public static int IgnoredByGenerationModel => 42;";
+
+    private const string UnionSource =
+        """
+        namespace Macaron.Union.Tests;
+
+        [TaggedUnion]
+        public readonly partial struct Foo : ITaggedUnionCases<int, string>
+        {
+            /* Members */
+        }
+        """;
     #endregion
 
     #region Tests
@@ -24,96 +36,53 @@ public sealed class IncrementalCachingTests
     {
         AssertSourceOutputRunReasons(
             generator: new TaggedUnionGenerator(),
-            sourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """,
-            updatedSourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-                public static int IgnoredByGenerationModel => 42;
-            }
-            """,
+            sourceCode: UnionSource,
+            updatedSourceCode: UnionSource.Replace("/* Members */", AddedMember),
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
             assertOfficialUnionSupportCaching: true
         );
     }
 
-    [Test]
-    public void TaggedUnionJsonSerializerGeneratorCachesSourceOutputWhenModelIsUnchanged()
+    [TestCaseSource(nameof(SerializerGenerators))]
+    public void SerializerCachesSourceOutputWhenModelIsUnchanged(
+        IIncrementalGenerator generator,
+        string serializerAttribute,
+        Assembly[] additionalAssemblies
+    )
     {
-        AssertSourceOutputRunReasons(
-            generator: new TaggedUnionJsonSerializerGenerator(),
-            sourceCode:
-            """
-            namespace Macaron.Union.Tests;
+        var source = UnionSource.Replace("[TaggedUnion]", $"[TaggedUnion]\n[{serializerAttribute}]");
+        var updated = source.Replace("/* Members */", AddedMember);
 
-            [TaggedUnion]
-            [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """,
-            updatedSourceCode:
-            """
-            namespace Macaron.Union.Tests;
+        AssertSourceOutputRunReasons(generator, source, updated, additionalAssemblies);
+    }
 
-            [TaggedUnion]
-            [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-                public static int IgnoredByGenerationModel => 42;
-            }
-            """,
-            additionalAssemblies:
-            [
-                typeof(TaggedUnionAttribute).Assembly,
-                typeof(TaggedUnionJsonSerializerAttribute).Assembly,
-                typeof(JsonSerializer).Assembly,
-            ]
-        );
+    [TestCaseSource(nameof(SerializerGenerators))]
+    public void SerializerCachesSourceOutputWhenConversionOperatorPolicyChanges(
+        IIncrementalGenerator generator,
+        string serializerAttribute,
+        Assembly[] additionalAssemblies
+    )
+    {
+        var source = UnionSource.Replace("[TaggedUnion]", $"[TaggedUnion]\n[{serializerAttribute}]");
+        var updated = source.Replace("[TaggedUnion]", "[TaggedUnion(GenerateConversionOperators = true)]");
+
+        AssertSourceOutputRunReasons(generator, source, updated, additionalAssemblies);
     }
 
     [Test]
     public void TaggedUnionGeneratorCachesSourceOutputWhenOnlyAnalysisDiagnosticsChange()
     {
+        var source = UnionSource
+            .Replace(
+                "[TaggedUnion]",
+                "public interface ICase { }\n\n[TaggedUnion]"
+            )
+            .Replace("int, string", "ICase, string");
+
         AssertSourceOutputRunReasons(
             generator: new TaggedUnionGenerator(),
-            sourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            public interface ICase
-            {
-            }
-
-            [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnionCases<ICase, string>
-            {
-            }
-            """,
-            updatedSourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            public interface ICase
-            {
-            }
-
-            [TaggedUnion(GenerateConversionOperators = true)]
-            public readonly partial struct Foo : ITaggedUnionCases<ICase, string>
-            {
-            }
-            """,
+            sourceCode: source,
+            updatedSourceCode: source.Replace("[TaggedUnion]", "[TaggedUnion(GenerateConversionOperators = true)]"),
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
             assertOfficialUnionSupportCaching: true,
             expectAnalysisDiagnosticChange: true
@@ -121,142 +90,25 @@ public sealed class IncrementalCachingTests
     }
 
     [Test]
-    public void TaggedUnionJsonSerializerGeneratorCachesSourceOutputWhenConversionOperatorPolicyChanges()
-    {
-        AssertSourceOutputRunReasons(
-            generator: new TaggedUnionJsonSerializerGenerator(),
-            sourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """,
-            updatedSourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion(GenerateConversionOperators = true)]
-            [TaggedUnionJsonSerializer]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """,
-            additionalAssemblies:
-            [
-                typeof(TaggedUnionAttribute).Assembly,
-                typeof(TaggedUnionJsonSerializerAttribute).Assembly,
-                typeof(JsonSerializer).Assembly,
-            ]
-        );
-    }
-
-    [Test]
-    public void TaggedUnionMemoryPackSerializerGeneratorCachesSourceOutputWhenModelIsUnchanged()
-    {
-        AssertSourceOutputRunReasons(
-            generator: new TaggedUnionMemoryPackSerializerGenerator(),
-            sourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            [TaggedUnionMemoryPackSerializer]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """,
-            updatedSourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            [TaggedUnionMemoryPackSerializer]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-                public static int IgnoredByGenerationModel => 42;
-            }
-            """,
-            additionalAssemblies:
-            [
-                typeof(TaggedUnionAttribute).Assembly,
-                typeof(TaggedUnionMemoryPackSerializerAttribute).Assembly,
-                typeof(MemoryPackSerializer).Assembly,
-            ]
-        );
-    }
-
-    [Test]
-    public void TaggedUnionMemoryPackSerializerGeneratorCachesSourceOutputWhenConversionOperatorPolicyChanges()
-    {
-        AssertSourceOutputRunReasons(
-            generator: new TaggedUnionMemoryPackSerializerGenerator(),
-            sourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            [TaggedUnionMemoryPackSerializer]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """,
-            updatedSourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion(GenerateConversionOperators = true)]
-            [TaggedUnionMemoryPackSerializer]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """,
-            additionalAssemblies:
-            [
-                typeof(TaggedUnionAttribute).Assembly,
-                typeof(TaggedUnionMemoryPackSerializerAttribute).Assembly,
-                typeof(MemoryPackSerializer).Assembly,
-            ]
-        );
-    }
-
-    [Test]
     public void TaggedUnionMemoryPackSerializerGeneratorUpdatesSourceOutputWhenCaseBecomesMemoryPackable()
     {
+        const string source =
+            """
+            namespace Macaron.Union.Tests;
+
+            public partial class Case { }
+
+            [TaggedUnion]
+            [TaggedUnionMemoryPackSerializer]
+            public readonly partial struct Foo : ITaggedUnionCases<Case, int>
+            {
+            }
+            """;
+
         AssertSourceOutputRunReasons(
             generator: new TaggedUnionMemoryPackSerializerGenerator(),
-            sourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            public partial class Case
-            {
-            }
-
-            [TaggedUnion]
-            [TaggedUnionMemoryPackSerializer]
-            public readonly partial struct Foo : ITaggedUnionCases<Case, int>
-            {
-            }
-            """,
-            updatedSourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [global::MemoryPack.MemoryPackable]
-            public partial class Case
-            {
-            }
-
-            [TaggedUnion]
-            [TaggedUnionMemoryPackSerializer]
-            public readonly partial struct Foo : ITaggedUnionCases<Case, int>
-            {
-            }
-            """,
+            sourceCode: source,
+            updatedSourceCode: source.Replace("public partial class Case", "[global::MemoryPack.MemoryPackable]\npublic partial class Case"),
             additionalAssemblies:
             [
                 typeof(TaggedUnionAttribute).Assembly,
@@ -267,58 +119,14 @@ public sealed class IncrementalCachingTests
         );
     }
 
-    [Test]
-    public void TaggedUnionGeneratorUpdatesSourceOutputWhenInterfaceCaseTypeChanges()
+    [TestCase("int, string", "long, string", TestName = "CaseTypeChangeUpdatesSourceOutput")]
+    [TestCase("[TaggedUnion]", "[TaggedUnion(StateParamName = \"context\")]", TestName = "StateParameterNameChangeUpdatesSourceOutput")]
+    public void TaggedUnionGeneratorUpdatesSourceOutputWhenModelChanges(string original, string replacement)
     {
         AssertSourceOutputRunReasons(
             generator: new TaggedUnionGenerator(),
-            sourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """,
-            updatedSourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnionCases<long, string>
-            {
-            }
-            """,
-            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
-            assertOfficialUnionSupportCaching: true,
-            expectModelChange: true
-        );
-    }
-
-    [Test]
-    public void TaggedUnionGeneratorUpdatesSourceOutputWhenStateParameterNameChanges()
-    {
-        AssertSourceOutputRunReasons(
-            generator: new TaggedUnionGenerator(),
-            sourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """,
-            updatedSourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion(StateParamName = "context")]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """,
+            sourceCode: UnionSource,
+            updatedSourceCode: UnionSource.Replace(original, replacement),
             additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
             assertOfficialUnionSupportCaching: true,
             expectModelChange: true
@@ -327,6 +135,31 @@ public sealed class IncrementalCachingTests
     #endregion
 
     #region Static Methods
+    private static IEnumerable<TestCaseData> SerializerGenerators()
+    {
+        yield return new TestCaseData(
+            new TaggedUnionJsonSerializerGenerator(),
+            "TaggedUnionJsonSerializer",
+            new[]
+            {
+                typeof(TaggedUnionAttribute).Assembly,
+                typeof(TaggedUnionJsonSerializerAttribute).Assembly,
+                typeof(JsonSerializer).Assembly,
+            }
+        ).SetArgDisplayNames("JSON");
+
+        yield return new TestCaseData(
+            new TaggedUnionMemoryPackSerializerGenerator(),
+            "TaggedUnionMemoryPackSerializer",
+            new[]
+            {
+                typeof(TaggedUnionAttribute).Assembly,
+                typeof(TaggedUnionMemoryPackSerializerAttribute).Assembly,
+                typeof(MemoryPackSerializer).Assembly,
+            }
+        ).SetArgDisplayNames("MemoryPack");
+    }
+
     private static void AssertSourceOutputRunReasons(
         IIncrementalGenerator generator,
         string sourceCode,
@@ -337,6 +170,8 @@ public sealed class IncrementalCachingTests
         bool expectAnalysisDiagnosticChange = false
     )
     {
+        Assert.That(updatedSourceCode, Is.Not.EqualTo(sourceCode));
+
         var (compilation, driver) = Helper.CreateCompilationAndDriver(
             sourceCode,
             additionalAssemblies,
@@ -347,7 +182,7 @@ public sealed class IncrementalCachingTests
                 trackIncrementalGeneratorSteps: true
             )
         );
-        GeneratorDriver trackingDriver = driver.RunGenerators(compilation);
+        var trackingDriver = driver.RunGenerators(compilation);
         var originalSyntaxTree = compilation.SyntaxTrees.Single();
         var updatedSyntaxTree = CSharpSyntaxTree.ParseText(
             updatedSourceCode,

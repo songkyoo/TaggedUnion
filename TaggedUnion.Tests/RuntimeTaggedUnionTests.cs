@@ -24,92 +24,41 @@ public sealed class RuntimeTaggedUnionTests
         Assert.That(attribute.StateParamName, Is.EqualTo("context"));
     }
 
-    [Test]
-    public void GenericTypesCoverAritiesFromTwoThroughEight()
+    [TestCase(2, typeof(TaggedUnion<,>))]
+    [TestCase(3, typeof(TaggedUnion<,,>))]
+    [TestCase(4, typeof(TaggedUnion<,,,>))]
+    [TestCase(5, typeof(TaggedUnion<,,,,>))]
+    [TestCase(6, typeof(TaggedUnion<,,,,,>))]
+    [TestCase(7, typeof(TaggedUnion<,,,,,,>))]
+    [TestCase(8, typeof(TaggedUnion<,,,,,,,>))]
+    public void GenericTypesCoverAritiesFromTwoThroughEight(int arity, Type unionType)
     {
-        Type[] taggedUnionTypes =
-        [
-            typeof(TaggedUnion<,>),
-            typeof(TaggedUnion<,,>),
-            typeof(TaggedUnion<,,,>),
-            typeof(TaggedUnion<,,,,>),
-            typeof(TaggedUnion<,,,,,>),
-            typeof(TaggedUnion<,,,,,,>),
-            typeof(TaggedUnion<,,,,,,,>),
-        ];
+        var staticMethods = unionType.GetMethods(BindingFlags.Public | BindingFlags.Static);
+        var instanceMethods = unionType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
-            for (var index = 0; index < taggedUnionTypes.Length; index++)
-            {
-                var taggedUnionType = taggedUnionTypes[index];
-                var arity = index + 2;
-
-                Assert.That(
-                    taggedUnionType.GetGenericArguments(),
-                    Has.Length.EqualTo(arity),
-                    taggedUnionType.FullName
-                );
-                Assert.That(
-                    taggedUnionType.GetInterfaces(),
-                    Has.Some.Matches<Type>(
-                        type => type.IsGenericType
-                            && type.GetGenericTypeDefinition().Name == $"ITaggedUnion`{arity}"
-                    ),
-                    taggedUnionType.FullName
-                );
-                Assert.That(
-                    taggedUnionType.GetConstructors(BindingFlags.Public | BindingFlags.Instance),
-                    Has.Length.EqualTo(arity),
-                    taggedUnionType.FullName
-                );
-                Assert.That(
-                    taggedUnionType
-                        .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                        .Count(method => method.Name == "op_Implicit"),
-                    Is.EqualTo(arity),
-                    taggedUnionType.FullName
-                );
-                Assert.That(
-                    taggedUnionType
-                        .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                        .Count(method => method.Name == nameof(TaggedUnion<int, string>.GetTag)),
-                    Is.EqualTo(1),
-                    taggedUnionType.FullName
-                );
-                Assert.That(
-                    taggedUnionType
-                        .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                        .Count(method => method.Name == nameof(TaggedUnion<int, string>.Get)
-                            && method.IsGenericMethodDefinition
-                            && method.GetGenericArguments().Length == 1
-                            && method.GetParameters().Length == 0),
-                    Is.EqualTo(1),
-                    taggedUnionType.FullName
-                );
-                Assert.That(
-                    taggedUnionType
-                        .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                        .Count(method => method.Name == nameof(TaggedUnion<int, string>.TryGetValue)),
-                    Is.EqualTo(arity),
-                    taggedUnionType.FullName
-                );
-                Assert.That(
-                    taggedUnionType
-                        .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                        .Count(method => method.Name == nameof(TaggedUnion<int, string>.Switch)),
-                    Is.EqualTo(2),
-                    taggedUnionType.FullName
-                );
-                Assert.That(
-                    taggedUnionType
-                        .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                        .Count(method => method.Name == nameof(TaggedUnion<int, string>.Match)),
-                    Is.EqualTo(2),
-                    taggedUnionType.FullName
-                );
-            }
-        });
+            Assert.That(unionType.GetGenericArguments(), Has.Length.EqualTo(arity));
+            Assert.That(
+                unionType.GetInterfaces(),
+                Has.Some.Matches<Type>(
+                    type => type.IsGenericType && type.GetGenericTypeDefinition().Name == $"ITaggedUnion`{arity}"
+                )
+            );
+            Assert.That(unionType.GetConstructors(), Has.Length.EqualTo(arity));
+            Assert.That(staticMethods.Count(method => method.Name == "op_Implicit"), Is.EqualTo(arity));
+            Assert.That(staticMethods.Count(method => method.Name == nameof(TaggedUnion<int, string>.GetTag)), Is.EqualTo(1));
+            Assert.That(
+                instanceMethods.Count(method => method.Name == nameof(TaggedUnion<int, string>.Get)
+                    && method.IsGenericMethodDefinition
+                    && method.GetGenericArguments().Length == 1
+                    && method.GetParameters().Length == 0),
+                Is.EqualTo(1)
+            );
+            Assert.That(instanceMethods.Count(method => method.Name == nameof(TaggedUnion<int, string>.TryGetValue)), Is.EqualTo(arity));
+            Assert.That(instanceMethods.Count(method => method.Name == nameof(TaggedUnion<int, string>.Switch)), Is.EqualTo(2));
+            Assert.That(instanceMethods.Count(method => method.Name == nameof(TaggedUnion<int, string>.Match)), Is.EqualTo(2));
+        }
     }
 
     [Test]
@@ -117,29 +66,42 @@ public sealed class RuntimeTaggedUnionTests
     {
         var value = default(TaggedUnion<int, string>);
 
-        var hasInt = value.TryGetValue(out int intValue);
-        var hasString = value.TryGetValue(out string? stringValue);
-
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(value.HasValue, Is.False);
             Assert.That(value.Value, Is.Null);
             Assert.That(value.ToString(), Is.EqualTo("<Uninitialized>"));
             Assert.That(value.GetHashCode(), Is.Zero);
             Assert.That(value, Is.EqualTo(default(TaggedUnion<int, string>)));
-            Assert.That(hasInt, Is.False);
-            Assert.That(intValue, Is.Zero);
-            Assert.That(hasString, Is.False);
-            Assert.That(stringValue, Is.Null);
-            Assert.That(
-                () => value.Switch(_ => { }, _ => { }),
-                Throws.TypeOf<InvalidOperationException>()
-            );
-            Assert.That(
-                () => value.Match(_ => 1, _ => 2),
-                Throws.TypeOf<InvalidOperationException>()
-            );
-        });
+        }
+    }
+
+    [Test]
+    public void TryGetValueReturnsFalseAndResetsTheOutputForAnUninitializedUnion()
+    {
+        var value = default(TaggedUnion<int, string>);
+        int number = 42;
+        string? text = "value";
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(value.TryGetValue(out number), Is.False);
+            Assert.That(number, Is.Zero);
+            Assert.That(value.TryGetValue(out text), Is.False);
+            Assert.That(text, Is.Null);
+        }
+    }
+
+    [Test]
+    public void SwitchRejectsAnUninitializedUnion()
+    {
+        Assert.Throws<InvalidOperationException>(() => default(TaggedUnion<int, string>).Switch(_ => { }, _ => { }));
+    }
+
+    [Test]
+    public void MatchRejectsAnUninitializedUnion()
+    {
+        Assert.Throws<InvalidOperationException>(() => default(TaggedUnion<int, string>).Match(_ => 1, _ => 2));
     }
 
     [Test]
@@ -192,167 +154,159 @@ public sealed class RuntimeTaggedUnionTests
     }
 
     [Test]
-    public void GetTagReturnsThePositionalTagAndIsHiddenFromEditorCompletion()
+    public void GetTagReturnsThePositionalTag()
     {
         var defaultValue = default(TaggedUnion<int, string>);
         var intValue = new TaggedUnion<int, string>(42);
         var stringValue = new TaggedUnion<int, string>("value");
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(TaggedUnion<int, string>.GetTag(in defaultValue), Is.Zero);
+            Assert.That(TaggedUnion<int, string>.GetTag(in intValue), Is.EqualTo(1));
+            Assert.That(TaggedUnion<int, string>.GetTag(in stringValue), Is.EqualTo(2));
+        }
+    }
+
+    [Test]
+    public void GetTagIsHiddenFromEditorCompletion()
+    {
         var getTagMethod = typeof(TaggedUnion<int, string>).GetMethod(
             nameof(TaggedUnion<int, string>.GetTag),
             BindingFlags.Public | BindingFlags.Static
         )!;
         var editorBrowsable = getTagMethod.GetCustomAttribute<EditorBrowsableAttribute>();
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(TaggedUnion<int, string>.GetTag(in defaultValue), Is.Zero);
-            Assert.That(TaggedUnion<int, string>.GetTag(in intValue), Is.EqualTo(1));
-            Assert.That(TaggedUnion<int, string>.GetTag(in stringValue), Is.EqualTo(2));
-            Assert.That(editorBrowsable?.State, Is.EqualTo(EditorBrowsableState.Never));
-        });
+        Assert.That(editorBrowsable?.State, Is.EqualTo(EditorBrowsableState.Never));
     }
 
     [Test]
-    public void ValueCanBeCreatedAndConvertedForEachCase()
+    public void ImplicitConversionsStoreTheCaseValue()
     {
-        TaggedUnion<int, string> intUnion = 42;
-        TaggedUnion<int, string> stringUnion = "value";
+        TaggedUnion<int, string> number = 42;
+        TaggedUnion<int, string> text = "value";
 
-        var intUnionHasInt = intUnion.TryGetValue(out int intValue);
-        var intUnionHasString = intUnion.TryGetValue(out string? missingString);
-        var stringUnionHasString = stringUnion.TryGetValue(out string? stringValue);
-
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
-            Assert.That(intUnion.HasValue, Is.True);
-            Assert.That(intUnion.Value, Is.EqualTo(42));
-            Assert.That(intUnionHasInt, Is.True);
-            Assert.That(intValue, Is.EqualTo(42));
-            Assert.That(intUnionHasString, Is.False);
-            Assert.That(missingString, Is.Null);
-            Assert.That((int)intUnion, Is.EqualTo(42));
-            Assert.That(
-                () => _ = (string)intUnion,
-                Throws.TypeOf<InvalidCastException>()
-            );
-
-            Assert.That(stringUnion.Value, Is.EqualTo("value"));
-            Assert.That(stringUnionHasString, Is.True);
-            Assert.That(stringValue, Is.EqualTo("value"));
-            Assert.That((string)stringUnion, Is.EqualTo("value"));
-
-            Assert.That(intUnion, Is.EqualTo(new TaggedUnion<int, string>(42)));
-            Assert.That(intUnion, Is.Not.EqualTo(new TaggedUnion<int, string>(43)));
-            Assert.That(intUnion, Is.Not.EqualTo(stringUnion));
-            Assert.That(
-                () => _ = new TaggedUnion<int, string>(null!),
-                Throws.TypeOf<ArgumentNullException>()
-            );
-        });
+            Assert.That(number.HasValue, Is.True);
+            Assert.That(number.Value, Is.EqualTo(42));
+            Assert.That(text.HasValue, Is.True);
+            Assert.That(text.Value, Is.EqualTo("value"));
+        }
     }
 
     [Test]
-    public void SwitchAndMatchUseTheActiveCase()
+    public void TryGetValueReturnsOnlyTheActiveCase()
     {
-        var value = new TaggedUnion<int, string>("value");
-        string? switchedValue = null;
+        var number = new TaggedUnion<int, string>(42);
+        var text = new TaggedUnion<int, string>("value");
 
-        value.Switch(
-            intValue => switchedValue = intValue.ToString(),
-            stringValue => switchedValue = stringValue
-        );
-        var matchedValue = value.Match(
-            intValue => intValue.ToString(),
-            stringValue => stringValue
-        );
-
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
-            Assert.That(switchedValue, Is.EqualTo("value"));
-            Assert.That(matchedValue, Is.EqualTo("value"));
-        });
+            Assert.That(number.TryGetValue(out int actualNumber), Is.True);
+            Assert.That(actualNumber, Is.EqualTo(42));
+            Assert.That(number.TryGetValue(out string? missingText), Is.False);
+            Assert.That(missingText, Is.Null);
+            Assert.That(text.TryGetValue(out string? actualText), Is.True);
+            Assert.That(actualText, Is.EqualTo("value"));
+        }
     }
 
     [Test]
-    public void SwitchAndMatchPassStateToTheActiveCase()
+    public void ExplicitConversionsRequireTheActiveCase()
+    {
+        var number = new TaggedUnion<int, string>(42);
+        var text = new TaggedUnion<int, string>("value");
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That((int)number, Is.EqualTo(42));
+            Assert.That((string)text, Is.EqualTo("value"));
+            Assert.Throws<InvalidCastException>(() => _ = (string)number);
+        }
+    }
+
+    [Test]
+    public void EqualityComparesTheCaseAndItsValue()
+    {
+        var value = new TaggedUnion<int, string>(42);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(value, Is.EqualTo(new TaggedUnion<int, string>(42)));
+            Assert.That(value, Is.Not.EqualTo(new TaggedUnion<int, string>(43)));
+            Assert.That(value, Is.Not.EqualTo(new TaggedUnion<int, string>("42")));
+        }
+    }
+
+    [Test]
+    public void ConstructorRejectsNullForAReferenceCase()
+    {
+        Assert.Throws<ArgumentNullException>(() => _ = new TaggedUnion<int, string>(null!));
+    }
+
+    [Test]
+    public void SwitchInvokesOnlyTheActiveCase()
     {
         var value = new TaggedUnion<int, string>("value");
-        var switchedValues = new List<string>();
+        var calls = new List<string>();
+
+        value.Switch(number => calls.Add(number.ToString()), calls.Add);
+
+        Assert.That(calls, Is.EqualTo(new[] { "value" }));
+    }
+
+    [Test]
+    public void MatchReturnsTheActiveCaseResult()
+    {
+        var value = new TaggedUnion<int, string>("value");
+
+        Assert.That(value.Match(number => number.ToString(), text => text), Is.EqualTo("value"));
+    }
+
+    [Test]
+    public void SwitchPassesStateToTheActiveCase()
+    {
+        var value = new TaggedUnion<int, string>("value");
+        var calls = new List<string>();
 
         value.Switch(
-            switchedValues,
-            static (intValue, values) => values.Add(intValue.ToString()),
-            static (stringValue, values) => values.Add(stringValue)
+            calls,
+            static (number, state) => state.Add(number.ToString()),
+            static (text, state) => state.Add(text)
         );
-        var matchedValue = value.Match(
+
+        Assert.That(calls, Is.EqualTo(new[] { "value" }));
+    }
+
+    [Test]
+    public void MatchPassesStateToTheActiveCase()
+    {
+        var value = new TaggedUnion<int, string>("value");
+        var result = value.Match(
             "matched:",
-            static (intValue, prefix) => prefix + intValue,
-            static (stringValue, prefix) => prefix + stringValue
+            static (number, prefix) => prefix + number,
+            static (text, prefix) => prefix + text
         );
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(switchedValues, Is.EqualTo(new[] { "value" }));
-            Assert.That(matchedValue, Is.EqualTo("matched:value"));
-        });
+        Assert.That(result, Is.EqualTo("matched:value"));
     }
 
     [Test]
-    public void EightCaseTypeImplementsTheOperationalContract()
+    public void EightCaseUnionSupportsTheLastCase()
     {
-        var value = new TaggedUnion<
-            Case1,
-            Case2,
-            Case3,
-            Case4,
-            Case5,
-            Case6,
-            Case7,
-            Case8
-        >(new Case8("value"));
-        ITaggedUnion<
-            Case1,
-            Case2,
-            Case3,
-            Case4,
-            Case5,
-            Case6,
-            Case7,
-            Case8
-        > contract = value;
+        var value = new TaggedUnion<int, long, short, byte, float, double, decimal, string>("value");
+        ITaggedUnion<int, long, short, byte, float, double, decimal, string> contract = value;
+        var matchedCase = value.Match(_ => 1, _ => 2, _ => 3, _ => 4, _ => 5, _ => 6, _ => 7, _ => 8);
 
-        var hasValue = contract.TryGetValue(out Case8? result);
-        var matchedCase = value.Match(
-            _ => 1,
-            _ => 2,
-            _ => 3,
-            _ => 4,
-            _ => 5,
-            _ => 6,
-            _ => 7,
-            _ => 8
-        );
-
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
-            Assert.That(hasValue, Is.True);
-            Assert.That(result?.Value, Is.EqualTo("value"));
+            Assert.That(contract.TryGetValue(out string? result), Is.True);
+            Assert.That(result, Is.EqualTo("value"));
             Assert.That(matchedCase, Is.EqualTo(8));
-            Assert.That(((Case8)value).Value, Is.EqualTo("value"));
-            Assert.That(
-                TaggedUnion<
-                    Case1,
-                    Case2,
-                    Case3,
-                    Case4,
-                    Case5,
-                    Case6,
-                    Case7,
-                    Case8
-                >.GetTag(in value),
-                Is.EqualTo(8)
-            );
-        });
+            Assert.That((string)value, Is.EqualTo("value"));
+            Assert.That(TaggedUnion<int, long, short, byte, float, double, decimal, string>.GetTag(in value), Is.EqualTo(8));
+        }
     }
 
     [Test]
@@ -394,20 +348,4 @@ public sealed class RuntimeTaggedUnionTests
         });
 #endif
     }
-
-    private sealed record Case1(string Value);
-
-    private sealed record Case2(string Value);
-
-    private sealed record Case3(string Value);
-
-    private sealed record Case4(string Value);
-
-    private sealed record Case5(string Value);
-
-    private sealed record Case6(string Value);
-
-    private sealed record Case7(string Value);
-
-    private sealed record Case8(string Value);
 }

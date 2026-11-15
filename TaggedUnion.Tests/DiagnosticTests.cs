@@ -271,43 +271,22 @@ public sealed class DiagnosticTests
         );
     }
 
-    [Test]
-    public void NullableReferenceCaseType()
+    [TestCase("string?", "int")]
+    [TestCase("int[]?", "string")]
+    public void TopLevelNullableReferenceCaseType(string nullableType, string otherType)
     {
         AssertDiagnosticLocationText(
             sourceCode:
-            """
-            #nullable enable
-
+            $$"""
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnionCases<string?, int>
+            public readonly partial struct Foo : ITaggedUnionCases<{{nullableType}}, {{otherType}}>
             {
             }
             """,
             expectedDiagnosticId: "MTU0004",
-            expectedLocationText: "string?"
-        );
-    }
-
-    [Test]
-    public void NullableReferenceArrayCaseType()
-    {
-        AssertDiagnosticLocationText(
-            sourceCode:
-            """
-            #nullable enable
-
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            public readonly partial struct Foo : ITaggedUnionCases<int[]?, string>
-            {
-            }
-            """,
-            expectedDiagnosticId: "MTU0004",
-            expectedLocationText: "int[]?"
+            expectedLocationText: nullableType
         );
     }
 
@@ -657,51 +636,20 @@ public sealed class DiagnosticTests
         );
     }
 
-    [Test]
-    public void CaseAttributeTypeNotSpecifiedInTaggedUnion()
+    [TestCase("")]
+    [TestCase(", \"baz\"")]
+    public void CaseAttributeTypeNotSpecifiedInTaggedUnion(string parameterNameArgument)
     {
         AssertDiagnosticLocationText(
             sourceCode:
-            """
+            $$"""
             namespace Macaron.Union.Tests;
 
-            public class Qux
-            {
-            }
-
-            public class Baz
-            {
-            }
+            public class Qux { }
+            public class Baz { }
 
             [TaggedUnion]
-            [TaggedUnionCase(typeof(Baz), "baz")]
-            public readonly partial struct Foo : ITaggedUnionCases<Qux, string>
-            {
-            }
-            """,
-            expectedDiagnosticId: "MTU0008",
-            expectedLocationText: "typeof(Baz)"
-        );
-    }
-
-    [Test]
-    public void CaseAttributeTypeNotSpecifiedInTaggedUnionWithoutParamName()
-    {
-        AssertDiagnosticLocationText(
-            sourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            public class Qux
-            {
-            }
-
-            public class Baz
-            {
-            }
-
-            [TaggedUnion]
-            [TaggedUnionCase(typeof(Baz))]
+            [TaggedUnionCase(typeof(Baz){{parameterNameArgument}})]
             public readonly partial struct Foo : ITaggedUnionCases<Qux, string>
             {
             }
@@ -854,34 +802,17 @@ public sealed class DiagnosticTests
         );
     }
 
-    [Test]
-    public void NegativeCaseTag()
+    [TestCase(-1)]
+    [TestCase(256)]
+    public void CaseTagOutsideByteRangeUsesCompilerDiagnostic(int tag)
     {
         AssertDiagnostic(
             sourceCode:
-            """
+            $$"""
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            [TaggedUnionCase(typeof(int), tag: -1)]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """,
-            expectedDiagnosticId: "CS1503"
-        );
-    }
-
-    [Test]
-    public void CaseTagAboveByteRange()
-    {
-        AssertDiagnostic(
-            sourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            [TaggedUnionCase(typeof(int), tag: 256)]
+            [TaggedUnionCase(typeof(int), tag: {{tag}})]
             public readonly partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
@@ -910,41 +841,23 @@ public sealed class DiagnosticTests
         );
     }
 
-    [Test]
-    public void ExplicitCaseTagDuplicatesGeneratedCaseTag()
+    [TestCase("int", "2")]
+    [TestCase("string", "0x01")]
+    public void ExplicitCaseTagCollisionIsReportedOnTheExplicitTag(string caseType, string tag)
     {
         AssertDiagnosticLocationText(
             sourceCode:
-            """
+            $$"""
             namespace Macaron.Union.Tests;
 
             [TaggedUnion]
-            [TaggedUnionCase(typeof(int), tag: 2)]
+            [TaggedUnionCase(typeof({{caseType}}), tag: {{tag}})]
             public readonly partial struct Foo : ITaggedUnionCases<int, string>
             {
             }
             """,
             expectedDiagnosticId: "MTU0010",
-            expectedLocationText: "2"
-        );
-    }
-
-    [Test]
-    public void ExplicitCaseTagDuplicatesEarlierGeneratedCaseTag()
-    {
-        AssertDiagnosticLocationText(
-            sourceCode:
-            """
-            namespace Macaron.Union.Tests;
-
-            [TaggedUnion]
-            [TaggedUnionCase(typeof(string), tag: 0x01)]
-            public readonly partial struct Foo : ITaggedUnionCases<int, string>
-            {
-            }
-            """,
-            expectedDiagnosticId: "MTU0010",
-            expectedLocationText: "0x01"
+            expectedLocationText: tag
         );
     }
 

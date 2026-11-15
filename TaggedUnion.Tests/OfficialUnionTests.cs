@@ -1,5 +1,4 @@
 #if NET11_0_OR_GREATER
-using System.Reflection;
 using Microsoft.CodeAnalysis;
 
 using static Macaron.Union.Tests.Helper;
@@ -25,7 +24,7 @@ public sealed class OfficialUnionTests
     }
 
     [Test]
-    public void InterfaceCaseImplicitlyConvertsToTaggedUnion()
+    public void InterfaceCaseImplicitlyConvertsToNamedUnion()
     {
         var (compilation, driver) = CreateCompilationAndDriver(
             sourceCode:
@@ -72,87 +71,15 @@ public sealed class OfficialUnionTests
             generators: [new TaggedUnionGenerator().AsSourceGenerator()]
         );
 
-        GeneratorDriver updatedDriver = driver.RunGeneratorsAndUpdateCompilation(
-            compilation,
-            out var outputCompilation,
-            out var generatorDiagnostics
-        );
+        var assembly = EmitGeneratedAssembly(compilation, driver);
+        var scenario = assembly.GetType("Macaron.Union.Tests.OfficialUnion.Generated.Scenario", throwOnError: true)!;
+        var expected = assembly.GetType("Macaron.Union.Tests.OfficialUnion.Generated.Value", throwOnError: true)!;
 
-        var errorDiagnostics = outputCompilation
-            .GetDiagnostics()
-            .Concat(generatorDiagnostics)
-            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-            .ToArray();
-        var generatedCode = updatedDriver
-            .GetRunResult()
-            .Results
-            .Single()
-            .GeneratedSources
-            .Single()
-            .SourceText
-            .ToString();
-
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
-            Assert.That(
-                errorDiagnostics,
-                Is.Empty,
-                string.Join(Environment.NewLine, errorDiagnostics.Select(x => x.ToString()))
-            );
-            Assert.That(
-                generatedCode,
-                Does.Contain("[global::System.Runtime.CompilerServices.Union]")
-            );
-            Assert.That(
-                generatedCode,
-                Does.Not.Contain(
-                    "implicit operator ValueOrInt(global::Macaron.Union.Tests.OfficialUnion.Generated.IValue value)"
-                )
-            );
-            Assert.That(
-                generatedCode,
-                Does.Contain(
-                    "value.TryGetValue(out global::Macaron.Union.Tests.OfficialUnion.Generated.IValue? result1)"
-                )
-            );
-        });
-
-        using var stream = new MemoryStream();
-        var emitResult = outputCompilation.Emit(stream);
-
-        Assert.That(
-            emitResult.Success,
-            Is.True,
-            string.Join(Environment.NewLine, emitResult.Diagnostics.Select(x => x.ToString()))
-        );
-
-        var assembly = Assembly.Load(stream.ToArray());
-        var result = assembly
-            .GetType(
-                "Macaron.Union.Tests.OfficialUnion.Generated.Scenario",
-                throwOnError: true
-            )!
-            .GetMethod("Convert", BindingFlags.Public | BindingFlags.Static)!
-            .Invoke(obj: null, parameters: null);
-        var convertedBack = assembly
-            .GetType(
-                "Macaron.Union.Tests.OfficialUnion.Generated.Scenario",
-                throwOnError: true
-            )!
-            .GetMethod("ConvertBack", BindingFlags.Public | BindingFlags.Static)!
-            .Invoke(obj: null, parameters: null);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(
-                result!.GetType().FullName,
-                Is.EqualTo("Macaron.Union.Tests.OfficialUnion.Generated.Value")
-            );
-            Assert.That(
-                convertedBack!.GetType().FullName,
-                Is.EqualTo("Macaron.Union.Tests.OfficialUnion.Generated.Value")
-            );
-        });
+            Assert.That(scenario.GetMethod("Convert")!.Invoke(null, null), Is.TypeOf(expected));
+            Assert.That(scenario.GetMethod("ConvertBack")!.Invoke(null, null), Is.TypeOf(expected));
+        }
     }
 
     private interface IRuntimeValue

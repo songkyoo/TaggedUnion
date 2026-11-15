@@ -28,34 +28,7 @@ public sealed class JsonSerializerTests
             ]
         );
 
-        driver.RunGeneratorsAndUpdateCompilation(
-            compilation,
-            out var outputCompilation,
-            out var generatorDiagnostics
-        );
-
-        var errorDiagnostics = outputCompilation
-            .GetDiagnostics()
-            .Concat(generatorDiagnostics)
-            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-            .ToArray();
-
-        Assert.That(
-            errorDiagnostics,
-            Is.Empty,
-            string.Join(Environment.NewLine, errorDiagnostics.Select(diagnostic => diagnostic.ToString()))
-        );
-
-        using var stream = new MemoryStream();
-        var emitResult = outputCompilation.Emit(stream);
-
-        Assert.That(
-            emitResult.Success,
-            Is.True,
-            string.Join(Environment.NewLine, emitResult.Diagnostics.Select(diagnostic => diagnostic.ToString()))
-        );
-
-        return Assembly.Load(stream.ToArray());
+        return EmitGeneratedAssembly(compilation, driver);
     }
     #endregion
 
@@ -87,41 +60,30 @@ public sealed class JsonSerializerTests
         )!;
     }
 
-    [Test]
-    public void WriteProducesTagAndValueArray()
+    [TestCase(7, "[1,7]")]
+    [TestCase("hello", """[42,"hello"]""")]
+    public void WriteProducesTagAndValueArray(object value, string expected)
     {
-        var intValue = CreateUnion(7);
-        var stringValue = CreateUnion("hello");
+        var union = Activator.CreateInstance(_unionType, value);
 
-        Assert.That(JsonSerializer.Serialize(intValue, _unionType), Is.EqualTo("[1,7]"));
-        Assert.That(JsonSerializer.Serialize(stringValue, _unionType), Is.EqualTo("[42,\"hello\"]"));
-
-        #region Local Functions
-        object CreateUnion(object value)
-        {
-            var constructor = _unionType.GetConstructor([value.GetType()])!;
-
-            return constructor.Invoke([value]);
-        }
-        #endregion
+        Assert.That(JsonSerializer.Serialize(union, _unionType), Is.EqualTo(expected));
     }
 
     [TestCase("[1,7]", 7)]
-    [TestCase("[42,\"hello\"]", "hello")]
+    [TestCase("""[42,"hello"]""", "hello")]
     public void ReadUsesTagToSelectCase(string json, object expected)
     {
-        var value = JsonSerializer.Deserialize(json, _unionType);
-        var actual = _unionType.GetProperty("Value")!.GetValue(value);
+        var union = (ITaggedUnion)JsonSerializer.Deserialize(json, _unionType)!;
 
-        Assert.That(actual, Is.EqualTo(expected));
+        Assert.That(union.Value, Is.EqualTo(expected));
     }
 
     [Test]
     public void ReadNullProducesUninitializedValue()
     {
-        var value = JsonSerializer.Deserialize("null", _unionType);
+        var union = (ITaggedUnion)JsonSerializer.Deserialize("null", _unionType)!;
 
-        Assert.That(_unionType.GetProperty("HasValue")!.GetValue(value), Is.False);
+        Assert.That(union.HasValue, Is.False);
     }
 
     [TestCase("{}")]
