@@ -6,13 +6,14 @@ internal static class UnionCaseStorageHelper
 {
     public static UnionCaseSourceGenerationModel CreateSourceGenerationModel(
         UnionCaseGenerationModel model,
-        bool generateConversionOperators
+        bool generateConversionOperators,
+        bool supportsExplicitLayout
     )
     {
         var storageKind = model switch
         {
             { IsReferenceType: true } => Reference,
-            { IsUnmanagedType: true } => Unmanaged,
+            { IsUnmanagedType: true } when supportsExplicitLayout => Unmanaged,
             _ => Managed,
         };
 
@@ -33,7 +34,7 @@ internal static class UnionCaseStorageHelper
             Reference => "_reference",
             Unmanaged => $"_unmanaged.Value{model.Tag}",
             Managed => $"_value{model.Tag}",
-            _ => throw new InvalidOperationException($"Invalid storage kind: {model.StorageKind}")
+            _ => throw new InvalidOperationException($"Invalid storage kind: {model.StorageKind}"),
         };
     }
 }

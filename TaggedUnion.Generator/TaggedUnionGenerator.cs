@@ -18,6 +18,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         public sealed record Success(
             UnionGenerationModel Model,
             bool GenerateConversionOperators,
+            bool SupportsExplicitLayout,
             string? GetTypeParameterName,
             ImmutableArray<TaggedUnionAnalysisDiagnostic> Diagnostics
         ) : TaggedUnionAnalysisResult
@@ -39,6 +40,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
 
                 return EqualityComparer<UnionGenerationModel>.Default.Equals(Model, other.Model)
                     && GenerateConversionOperators == other.GenerateConversionOperators
+                    && SupportsExplicitLayout == other.SupportsExplicitLayout
                     && GetTypeParameterName == other.GetTypeParameterName
                     && Diagnostics.SequenceEqual(
                         items: other.Diagnostics,
@@ -53,6 +55,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                     var hashCode = EqualityComparer<UnionGenerationModel>.Default.GetHashCode(Model);
 
                     hashCode = (hashCode * 397) ^ GenerateConversionOperators.GetHashCode();
+                    hashCode = (hashCode * 397) ^ SupportsExplicitLayout.GetHashCode();
                     hashCode = (hashCode * 397) ^ (GetTypeParameterName?.GetHashCode() ?? 0);
 
                     if (Diagnostics.IsDefault)
@@ -94,7 +97,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         {
             AnalysisResult.Success success => CreateSuccessResult(
                 model: success.Model,
-                GetTypeParameterName((INamedTypeSymbol)context.TargetSymbol),
+                targetType: (INamedTypeSymbol)context.TargetSymbol,
                 taggedUnionAttribute,
                 cancellationToken
             ),
@@ -105,18 +108,22 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         #region Local Functions
         static TaggedUnionAnalysisResult.Success CreateSuccessResult(
             UnionGenerationModel model,
-            string? getTypeParameterName,
+            INamedTypeSymbol targetType,
             AttributeData taggedUnionAttribute,
             CancellationToken cancellationToken
         )
         {
             var generateConversionOperators = ConversionOperatorGenerationPolicy.IsEnabled(taggedUnionAttribute);
+            // 메타데이터에서 중첩 타입은 바깥 타입의 제네릭 매개변수도 가진다.
+            var supportsExplicitLayout = !targetType.IsGenericType;
+            var getTypeParameterName = GetTypeParameterName(targetType);
 
             if (!generateConversionOperators)
             {
                 return new TaggedUnionAnalysisResult.Success(
                     Model: model,
                     GenerateConversionOperators: false,
+                    SupportsExplicitLayout: supportsExplicitLayout,
                     GetTypeParameterName: getTypeParameterName,
                     Diagnostics: ImmutableArray<TaggedUnionAnalysisDiagnostic>.Empty
                 );
@@ -133,6 +140,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 return new TaggedUnionAnalysisResult.Success(
                     Model: model,
                     GenerateConversionOperators: true,
+                    SupportsExplicitLayout: supportsExplicitLayout,
                     GetTypeParameterName: getTypeParameterName,
                     Diagnostics: ImmutableArray<TaggedUnionAnalysisDiagnostic>.Empty
                 );
@@ -150,6 +158,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
             return new TaggedUnionAnalysisResult.Success(
                 Model: model,
                 GenerateConversionOperators: false,
+                SupportsExplicitLayout: supportsExplicitLayout,
                 GetTypeParameterName: getTypeParameterName,
                 Diagnostics: ImmutableArray.Create<TaggedUnionAnalysisDiagnostic>(diagnostic)
             );
@@ -247,6 +256,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 return new TaggedUnionGenerationModel(
                     Union: success.Model,
                     GenerateConversionOperators: success.GenerateConversionOperators,
+                    SupportsExplicitLayout: success.SupportsExplicitLayout,
                     GetTypeParameterName: success.GetTypeParameterName
                 );
             })

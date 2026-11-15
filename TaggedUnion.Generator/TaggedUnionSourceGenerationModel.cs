@@ -17,6 +17,8 @@ internal sealed record TaggedUnionSourceGenerationModel(
 
     public bool GenerateConversionOperators => Model.GenerateConversionOperators;
 
+    public bool SupportsExplicitLayout => Model.SupportsExplicitLayout;
+
     public ImmutableArray<UnionCaseGenerationModel> Cases => Model.Union.Cases;
 
     public string HintName => Model.Union.HintName;

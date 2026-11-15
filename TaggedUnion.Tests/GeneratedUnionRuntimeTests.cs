@@ -90,6 +90,50 @@ public sealed class GeneratedUnionRuntimeTests
     }
 
     [Test]
+    public void UnmanagedCasesWorkInsideAGenericContainingType()
+    {
+        var (compilation, driver) = CreateCompilationAndDriver(
+            sourceCode:
+            """
+            namespace Macaron.Union.Tests;
+
+            public partial class Holder<T>
+            {
+                public partial class Inner
+                {
+                    [TaggedUnion]
+                    [TaggedUnionCase(typeof(int), tag: 42)]
+                    public partial struct Foo : ITaggedUnionCases<int, long>
+                    {
+                    }
+                }
+            }
+
+            public static class Scenario
+            {
+                public static (int, long) ReadValues()
+                {
+                    var first = new Holder<string>.Inner.Foo(42);
+                    var second = new Holder<string>.Inner.Foo(5_000_000_000L);
+
+                    return (first.Get<int>(), second.Get<long>());
+                }
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
+            assemblyName: "Macaron.TaggedUnion.Tests.GenericContainingType",
+            generators: [new TaggedUnionGenerator().AsSourceGenerator()]
+        );
+
+        var readValues = EmitGeneratedAssembly(compilation, driver)
+            .GetType("Macaron.Union.Tests.Scenario", throwOnError: true)!
+            .GetMethod("ReadValues")!
+            .CreateDelegate<Func<(int, long)>>();
+
+        Assert.That(readValues(), Is.EqualTo((42, 5_000_000_000L)));
+    }
+
+    [Test]
     public void GeneratedGetUsesTheDeclaredCaseTypeAndCustomTag()
     {
         var (compilation, driver) = CreateCompilationAndDriver(
