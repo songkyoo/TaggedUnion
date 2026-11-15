@@ -446,9 +446,45 @@ internal sealed class TaggedUnionSourceWriter(TaggedUnionSourceGenerationModel m
         AppendLine("#endregion");
     }
 
+    private void WriteGetMethod(string typeParameter)
+    {
+        AppendLine($"public {typeParameter} Get<{typeParameter}>() where {typeParameter} : notnull");
+        AppendLine("{");
+        IncreaseIndent();
+
+        AppendLine($"switch ({TagField})");
+        AppendLine("{");
+        IncreaseIndent();
+
+        foreach (var caseContext in _caseModels)
+        {
+            var caseType = caseContext.FullyQualifiedTypeName;
+
+            AppendLine($"case {caseContext.Tag} when typeof({typeParameter}) == typeof({caseType}):");
+            AppendLine("{");
+            AppendLine($"{Indent}var value = {GetValueProperty(caseContext.Tag)};");
+            AppendLine($"{Indent}return global::System.Runtime.CompilerServices.Unsafe.As<{caseType}, {typeParameter}>(ref value);");
+            AppendLine("}");
+        }
+
+        DecreaseIndent();
+        AppendLine("}");
+        AppendLine();
+        AppendLine($"throw new global::System.InvalidCastException($\"Unable to cast object of type '{{typeof({model.TypeName})}}' to type '{{typeof({typeParameter})}}'.\");");
+
+        DecreaseIndent();
+        AppendLine("}");
+    }
+
     private void WriteMethods()
     {
         AppendLine("#region Methods");
+
+        if (model.Model.GetTypeParameterName is { } getTypeParameterName)
+        {
+            WriteGetMethod(getTypeParameterName);
+            AppendLine();
+        }
 
         // TryGet
         foreach (var caseContext in _caseModels)

@@ -233,6 +233,27 @@ private static void AppendTaggedUnion(StringBuilder source, int arity)
     source.AppendLine("    {");
     source.AppendLine("        return value._tag;");
     source.AppendLine("    }");
+    source.AppendLine();
+    source.AppendLine("    public TValue Get<TValue>() where TValue : notnull");
+    source.AppendLine("    {");
+    source.AppendLine("        switch (_tag)");
+    source.AppendLine("        {");
+
+    for (var i = 1; i <= arity; i++)
+    {
+        source.AppendLine($"            case {i} when typeof(TValue) == typeof(T{i}):");
+        source.AppendLine("            {");
+        source.AppendLine($"                var value = _value{i}!;");
+        source.AppendLine($"                return global::System.Runtime.CompilerServices.Unsafe.As<T{i}, TValue>(ref value);");
+        source.AppendLine("            }");
+    }
+
+    source.AppendLine("        }");
+    source.AppendLine();
+    source.AppendLine("        throw new global::System.InvalidCastException(");
+    source.AppendLine($"            $\"Unable to cast object of type '{{typeof({unionType})}}' to type '{{typeof(TValue)}}'.\"");
+    source.AppendLine("        );");
+    source.AppendLine("    }");
 
     for (var i = 1; i <= arity; i++)
     {

@@ -9,13 +9,15 @@ internal static class HintNameHelper
 {
     public static string GetTypeHintName(INamedTypeSymbol typeSymbol)
     {
-        var assemblyName = typeSymbol.ContainingAssembly != null ? $"{typeSymbol.ContainingAssembly}," : "";
+        var assemblyName = typeSymbol.ContainingAssembly != null ? $"{typeSymbol.ContainingAssembly}" : "";
         var qualifiedName = typeSymbol.ToDisplayString(FullyQualifiedFormat);
 
         const uint fnvPrime = 16777619;
         const uint offsetBasis = 2166136261;
 
-        var bytes = Encoding.UTF8.GetBytes($"{assemblyName}, {qualifiedName}");
+        var bytes = string.IsNullOrWhiteSpace(assemblyName)
+            ? Encoding.UTF8.GetBytes($"{qualifiedName}")
+            : Encoding.UTF8.GetBytes($"{assemblyName}, {qualifiedName}");
         var hash = offsetBasis;
 
         foreach (var b in bytes)

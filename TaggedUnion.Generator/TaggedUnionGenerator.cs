@@ -18,6 +18,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         public sealed record Success(
             UnionGenerationModel Model,
             bool GenerateConversionOperators,
+            string? GetTypeParameterName,
             ImmutableArray<TaggedUnionAnalysisDiagnostic> Diagnostics
         ) : TaggedUnionAnalysisResult
         {
@@ -38,6 +39,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
 
                 return EqualityComparer<UnionGenerationModel>.Default.Equals(Model, other.Model)
                     && GenerateConversionOperators == other.GenerateConversionOperators
+                    && GetTypeParameterName == other.GetTypeParameterName
                     && Diagnostics.SequenceEqual(
                         items: other.Diagnostics,
                         comparer: EqualityComparer<TaggedUnionAnalysisDiagnostic>.Default
@@ -51,6 +53,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                     var hashCode = EqualityComparer<UnionGenerationModel>.Default.GetHashCode(Model);
 
                     hashCode = (hashCode * 397) ^ GenerateConversionOperators.GetHashCode();
+                    hashCode = (hashCode * 397) ^ (GetTypeParameterName?.GetHashCode() ?? 0);
 
                     if (Diagnostics.IsDefault)
                     {
@@ -91,6 +94,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         {
             AnalysisResult.Success success => CreateSuccessResult(
                 model: success.Model,
+                GetTypeParameterName((INamedTypeSymbol)context.TargetSymbol),
                 taggedUnionAttribute,
                 cancellationToken
             ),
@@ -101,6 +105,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
         #region Local Functions
         static TaggedUnionAnalysisResult.Success CreateSuccessResult(
             UnionGenerationModel model,
+            string? getTypeParameterName,
             AttributeData taggedUnionAttribute,
             CancellationToken cancellationToken
         )
@@ -112,6 +117,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 return new TaggedUnionAnalysisResult.Success(
                     Model: model,
                     GenerateConversionOperators: false,
+                    GetTypeParameterName: getTypeParameterName,
                     Diagnostics: ImmutableArray<TaggedUnionAnalysisDiagnostic>.Empty
                 );
             }
@@ -127,6 +133,7 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
                 return new TaggedUnionAnalysisResult.Success(
                     Model: model,
                     GenerateConversionOperators: true,
+                    GetTypeParameterName: getTypeParameterName,
                     Diagnostics: ImmutableArray<TaggedUnionAnalysisDiagnostic>.Empty
                 );
             }
@@ -143,10 +150,38 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
             return new TaggedUnionAnalysisResult.Success(
                 Model: model,
                 GenerateConversionOperators: false,
+                GetTypeParameterName: getTypeParameterName,
                 Diagnostics: ImmutableArray.Create<TaggedUnionAnalysisDiagnostic>(diagnostic)
             );
         }
         #endregion
+    }
+
+    private static string? GetTypeParameterName(INamedTypeSymbol targetType)
+    {
+        if (targetType.Name == "Get" || !targetType.GetMembers("Get").IsEmpty)
+        {
+            return null;
+        }
+
+        var usedNames = new HashSet<string>(StringComparer.Ordinal) { targetType.Name };
+
+        foreach (var containingType in GetContainingTypes(targetType))
+        {
+            foreach (var typeParameter in containingType.TypeParameters)
+            {
+                usedNames.Add(typeParameter.Name);
+            }
+        }
+
+        var name = "TValue";
+
+        while (usedNames.Contains(name))
+        {
+            name += "_";
+        }
+
+        return name;
     }
 
     private static Diagnostic? CreateMissingTaggedUnionAttributeDiagnostic(
@@ -211,7 +246,8 @@ public sealed class TaggedUnionGenerator : IIncrementalGenerator
 
                 return new TaggedUnionGenerationModel(
                     Union: success.Model,
-                    GenerateConversionOperators: success.GenerateConversionOperators
+                    GenerateConversionOperators: success.GenerateConversionOperators,
+                    GetTypeParameterName: success.GetTypeParameterName
                 );
             })
             .WithTrackingName(nameof(UnionGenerationModel));

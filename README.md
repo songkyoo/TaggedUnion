@@ -67,6 +67,7 @@ readonly partial struct IntOrString :
     public override int GetHashCode();
     public override string ToString();
 
+    public TValue Get<TValue>() where TValue : notnull;
     public bool TryGetValue(out int value);
     public bool TryGetValue([global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] out string? value);
 
@@ -100,7 +101,7 @@ readonly partial struct IntOrString :
 TaggedUnion<int, string> number = 42;
 TaggedUnion<int, string> text = "hello";
 
-var numberValue = (int)number;
+var numberValue = number.Get<int>();
 
 if (text.TryGetValue(out string? textValue))
 {
@@ -153,7 +154,18 @@ IntOrString roundTripped = generic;
 
 ### 값을 사용하기
 
-값을 꺼낼 때는 `Value`, `TryGetValue`, 사용할 때는 `Switch`, `Match`를 쓸 수 있습니다.
+값을 꺼낼 때는 `Get<T>()`, `TryGetValue`, `Value`를, 각 케이스의 값을 처리할 때는 `Switch`, `Match`를 사용할 수 있습니다.
+
+#### Get<T> 메서드
+
+`Get<T>()`는 현재 활성 케이스의 선언 타입이 `T`와 정확히 일치할 때 값을 반환합니다. 타입이 다르거나 유니온이 초기화되지 않았으면 `InvalidCastException`을 발생시킵니다. 예를 들어 `IFoo` 케이스가 `Foo` 인스턴스를 담고 있으면 `Get<IFoo>()`로 꺼냅니다.
+
+범용 유니온과 이름 있는 유니온에서 사용할 수 있으며, 이름 있는 유니온의 `GenerateConversionOperators` 설정과 관계없이 제공됩니다.
+이름 있는 유니온의 타입 이름이나 기존 멤버 이름이 `Get`인 경우 기존 선언이 우선합니다.
+
+```csharp
+var number = new IntOrString(42).Get<int>();
+```
 
 #### Value 프로퍼티
 

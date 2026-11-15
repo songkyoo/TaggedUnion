@@ -115,7 +115,7 @@ public sealed class MemoryPackSerializerSourceGenerationTests
         {
             Assert.That(
                 generatedHintNames,
-                Is.EqualTo(new[] { "Foo_0.c82fa166.MemoryPackSerializer.g.cs" })
+                Is.EqualTo(new[] { "Foo_0.ba8c0e3e.MemoryPackSerializer.g.cs" })
             );
 
             foreach (var expectedFragment in expectedFragments)

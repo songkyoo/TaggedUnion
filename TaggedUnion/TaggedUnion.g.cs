@@ -180,6 +180,27 @@ public readonly struct TaggedUnion<T1, T2> :
         return value._tag;
     }
 
+    public TValue Get<TValue>() where TValue : notnull
+    {
+        switch (_tag)
+        {
+            case 1 when typeof(TValue) == typeof(T1):
+            {
+                var value = _value1!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T1, TValue>(ref value);
+            }
+            case 2 when typeof(TValue) == typeof(T2):
+            {
+                var value = _value2!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T2, TValue>(ref value);
+            }
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2>)}' to type '{typeof(TValue)}'."
+        );
+    }
+
     public bool TryGetValue(
         [global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] out T1? value
     )
@@ -498,6 +519,32 @@ public readonly struct TaggedUnion<T1, T2, T3> :
     public static byte GetTag(in TaggedUnion<T1, T2, T3> value)
     {
         return value._tag;
+    }
+
+    public TValue Get<TValue>() where TValue : notnull
+    {
+        switch (_tag)
+        {
+            case 1 when typeof(TValue) == typeof(T1):
+            {
+                var value = _value1!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T1, TValue>(ref value);
+            }
+            case 2 when typeof(TValue) == typeof(T2):
+            {
+                var value = _value2!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T2, TValue>(ref value);
+            }
+            case 3 when typeof(TValue) == typeof(T3):
+            {
+                var value = _value3!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T3, TValue>(ref value);
+            }
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3>)}' to type '{typeof(TValue)}'."
+        );
     }
 
     public bool TryGetValue(
@@ -885,6 +932,37 @@ public readonly struct TaggedUnion<T1, T2, T3, T4> :
     public static byte GetTag(in TaggedUnion<T1, T2, T3, T4> value)
     {
         return value._tag;
+    }
+
+    public TValue Get<TValue>() where TValue : notnull
+    {
+        switch (_tag)
+        {
+            case 1 when typeof(TValue) == typeof(T1):
+            {
+                var value = _value1!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T1, TValue>(ref value);
+            }
+            case 2 when typeof(TValue) == typeof(T2):
+            {
+                var value = _value2!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T2, TValue>(ref value);
+            }
+            case 3 when typeof(TValue) == typeof(T3):
+            {
+                var value = _value3!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T3, TValue>(ref value);
+            }
+            case 4 when typeof(TValue) == typeof(T4):
+            {
+                var value = _value4!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T4, TValue>(ref value);
+            }
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3, T4>)}' to type '{typeof(TValue)}'."
+        );
     }
 
     public bool TryGetValue(
@@ -1339,6 +1417,42 @@ public readonly struct TaggedUnion<T1, T2, T3, T4, T5> :
     public static byte GetTag(in TaggedUnion<T1, T2, T3, T4, T5> value)
     {
         return value._tag;
+    }
+
+    public TValue Get<TValue>() where TValue : notnull
+    {
+        switch (_tag)
+        {
+            case 1 when typeof(TValue) == typeof(T1):
+            {
+                var value = _value1!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T1, TValue>(ref value);
+            }
+            case 2 when typeof(TValue) == typeof(T2):
+            {
+                var value = _value2!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T2, TValue>(ref value);
+            }
+            case 3 when typeof(TValue) == typeof(T3):
+            {
+                var value = _value3!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T3, TValue>(ref value);
+            }
+            case 4 when typeof(TValue) == typeof(T4):
+            {
+                var value = _value4!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T4, TValue>(ref value);
+            }
+            case 5 when typeof(TValue) == typeof(T5):
+            {
+                var value = _value5!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T5, TValue>(ref value);
+            }
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3, T4, T5>)}' to type '{typeof(TValue)}'."
+        );
     }
 
     public bool TryGetValue(
@@ -1860,6 +1974,47 @@ public readonly struct TaggedUnion<T1, T2, T3, T4, T5, T6> :
     public static byte GetTag(in TaggedUnion<T1, T2, T3, T4, T5, T6> value)
     {
         return value._tag;
+    }
+
+    public TValue Get<TValue>() where TValue : notnull
+    {
+        switch (_tag)
+        {
+            case 1 when typeof(TValue) == typeof(T1):
+            {
+                var value = _value1!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T1, TValue>(ref value);
+            }
+            case 2 when typeof(TValue) == typeof(T2):
+            {
+                var value = _value2!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T2, TValue>(ref value);
+            }
+            case 3 when typeof(TValue) == typeof(T3):
+            {
+                var value = _value3!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T3, TValue>(ref value);
+            }
+            case 4 when typeof(TValue) == typeof(T4):
+            {
+                var value = _value4!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T4, TValue>(ref value);
+            }
+            case 5 when typeof(TValue) == typeof(T5):
+            {
+                var value = _value5!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T5, TValue>(ref value);
+            }
+            case 6 when typeof(TValue) == typeof(T6):
+            {
+                var value = _value6!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T6, TValue>(ref value);
+            }
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3, T4, T5, T6>)}' to type '{typeof(TValue)}'."
+        );
     }
 
     public bool TryGetValue(
@@ -2448,6 +2603,52 @@ public readonly struct TaggedUnion<T1, T2, T3, T4, T5, T6, T7> :
     public static byte GetTag(in TaggedUnion<T1, T2, T3, T4, T5, T6, T7> value)
     {
         return value._tag;
+    }
+
+    public TValue Get<TValue>() where TValue : notnull
+    {
+        switch (_tag)
+        {
+            case 1 when typeof(TValue) == typeof(T1):
+            {
+                var value = _value1!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T1, TValue>(ref value);
+            }
+            case 2 when typeof(TValue) == typeof(T2):
+            {
+                var value = _value2!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T2, TValue>(ref value);
+            }
+            case 3 when typeof(TValue) == typeof(T3):
+            {
+                var value = _value3!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T3, TValue>(ref value);
+            }
+            case 4 when typeof(TValue) == typeof(T4):
+            {
+                var value = _value4!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T4, TValue>(ref value);
+            }
+            case 5 when typeof(TValue) == typeof(T5):
+            {
+                var value = _value5!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T5, TValue>(ref value);
+            }
+            case 6 when typeof(TValue) == typeof(T6):
+            {
+                var value = _value6!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T6, TValue>(ref value);
+            }
+            case 7 when typeof(TValue) == typeof(T7):
+            {
+                var value = _value7!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T7, TValue>(ref value);
+            }
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3, T4, T5, T6, T7>)}' to type '{typeof(TValue)}'."
+        );
     }
 
     public bool TryGetValue(
@@ -3103,6 +3304,57 @@ public readonly struct TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> :
     public static byte GetTag(in TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8> value)
     {
         return value._tag;
+    }
+
+    public TValue Get<TValue>() where TValue : notnull
+    {
+        switch (_tag)
+        {
+            case 1 when typeof(TValue) == typeof(T1):
+            {
+                var value = _value1!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T1, TValue>(ref value);
+            }
+            case 2 when typeof(TValue) == typeof(T2):
+            {
+                var value = _value2!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T2, TValue>(ref value);
+            }
+            case 3 when typeof(TValue) == typeof(T3):
+            {
+                var value = _value3!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T3, TValue>(ref value);
+            }
+            case 4 when typeof(TValue) == typeof(T4):
+            {
+                var value = _value4!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T4, TValue>(ref value);
+            }
+            case 5 when typeof(TValue) == typeof(T5):
+            {
+                var value = _value5!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T5, TValue>(ref value);
+            }
+            case 6 when typeof(TValue) == typeof(T6):
+            {
+                var value = _value6!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T6, TValue>(ref value);
+            }
+            case 7 when typeof(TValue) == typeof(T7):
+            {
+                var value = _value7!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T7, TValue>(ref value);
+            }
+            case 8 when typeof(TValue) == typeof(T8):
+            {
+                var value = _value8!;
+                return global::System.Runtime.CompilerServices.Unsafe.As<T8, TValue>(ref value);
+            }
+        }
+
+        throw new global::System.InvalidCastException(
+            $"Unable to cast object of type '{typeof(TaggedUnion<T1, T2, T3, T4, T5, T6, T7, T8>)}' to type '{typeof(TValue)}'."
+        );
     }
 
     public bool TryGetValue(

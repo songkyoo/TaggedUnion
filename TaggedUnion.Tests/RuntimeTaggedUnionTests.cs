@@ -80,6 +80,16 @@ public sealed class RuntimeTaggedUnionTests
                 Assert.That(
                     taggedUnionType
                         .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                        .Count(method => method.Name == nameof(TaggedUnion<int, string>.Get)
+                            && method.IsGenericMethodDefinition
+                            && method.GetGenericArguments().Length == 1
+                            && method.GetParameters().Length == 0),
+                    Is.EqualTo(1),
+                    taggedUnionType.FullName
+                );
+                Assert.That(
+                    taggedUnionType
+                        .GetMethods(BindingFlags.Public | BindingFlags.Instance)
                         .Count(method => method.Name == nameof(TaggedUnion<int, string>.TryGetValue)),
                     Is.EqualTo(arity),
                     taggedUnionType.FullName
@@ -130,6 +140,55 @@ public sealed class RuntimeTaggedUnionTests
                 Throws.TypeOf<InvalidOperationException>()
             );
         });
+    }
+
+    [Test]
+    public void GetRequiresTheExactTypeOfTheActiveCase()
+    {
+        var number = new TaggedUnion<int, string>(42);
+        IComparable text = "value";
+        var interfaceCase = new TaggedUnion<string, IComparable>(text);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(number.Get<int>(), Is.EqualTo(42));
+            Assert.That(interfaceCase.Get<IComparable>(), Is.SameAs(text));
+            Assert.Throws<InvalidCastException>(() => number.Get<string>());
+            Assert.Throws<InvalidCastException>(() => number.Get<object>());
+            Assert.Throws<InvalidCastException>(() => interfaceCase.Get<string>());
+            Assert.Throws<InvalidCastException>(() => default(TaggedUnion<int, string>).Get<int>());
+        });
+    }
+
+    [Test]
+    public void GetReadsTheActivePositionWhenCaseTypesRepeat()
+    {
+        var first = CreateFirst<int, int>(41);
+        var second = CreateSecond<int, int>(42);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(TaggedUnion<int, int>.GetTag(in first), Is.EqualTo(1));
+            Assert.That(TaggedUnion<int, int>.GetTag(in second), Is.EqualTo(2));
+            Assert.That(first.Get<int>(), Is.EqualTo(41));
+            Assert.That(second.Get<int>(), Is.EqualTo(42));
+        });
+
+        #region Local Functions
+        static TaggedUnion<T1, T2> CreateFirst<T1, T2>(T1 value)
+            where T1 : notnull
+            where T2 : notnull
+        {
+            return new TaggedUnion<T1, T2>(value);
+        }
+
+        static TaggedUnion<T1, T2> CreateSecond<T1, T2>(T2 value)
+            where T1 : notnull
+            where T2 : notnull
+        {
+            return new TaggedUnion<T1, T2>(value);
+        }
+        #endregion
     }
 
     [Test]

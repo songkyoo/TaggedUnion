@@ -1,3 +1,5 @@
+// ReSharper disable PossibleMultipleEnumeration
+
 using System.Reflection;
 using Microsoft.CodeAnalysis;
 
@@ -25,7 +27,7 @@ public sealed class SourceGenerationTests
         );
 
         Assert.That(generatedHintNames, Has.Length.EqualTo(1));
-        Assert.That(generatedHintNames[0], Is.EqualTo("Foo_0.c82fa166.g.cs"));
+        Assert.That(generatedHintNames[0], Is.EqualTo("Foo_0.ba8c0e3e.g.cs"));
     }
 
     [Test]
@@ -54,7 +56,7 @@ public sealed class SourceGenerationTests
         var errorDiagnostics = outputCompilation
             .GetDiagnostics()
             .Concat(generatorDiagnostics)
-            .Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
             .ToArray();
         var generatedCode = updatedDriver
             .GetRunResult()
@@ -277,6 +279,25 @@ public sealed class SourceGenerationTests
                     #endregion
 
                     #region Methods
+                    public TValue Get<TValue>() where TValue : notnull
+                    {
+                        switch (_tag)
+                        {
+                            case 1 when typeof(TValue) == typeof(global::Macaron.Union.Tests.Qux<int>):
+                            {
+                                var value = __1;
+                                return global::System.Runtime.CompilerServices.Unsafe.As<global::Macaron.Union.Tests.Qux<int>, TValue>(ref value);
+                            }
+                            case 2 when typeof(TValue) == typeof(string):
+                            {
+                                var value = __2;
+                                return global::System.Runtime.CompilerServices.Unsafe.As<string, TValue>(ref value);
+                            }
+                        }
+
+                        throw new global::System.InvalidCastException($"Unable to cast object of type '{typeof(Foo)}' to type '{typeof(TValue)}'.");
+                    }
+
                     public bool TryGetValue([global::System.Diagnostics.CodeAnalysis.NotNullWhen(returnValue: true)] out global::Macaron.Union.Tests.Qux<int>? value)
                     {
                         if (_tag != 1)
@@ -560,6 +581,25 @@ public sealed class SourceGenerationTests
                     #endregion
 
                     #region Methods
+                    public TValue Get<TValue>() where TValue : notnull
+                    {
+                        switch (_tag)
+                        {
+                            case 1 when typeof(TValue) == typeof(global::Macaron.Union.Tests.Qux):
+                            {
+                                var value = __1;
+                                return global::System.Runtime.CompilerServices.Unsafe.As<global::Macaron.Union.Tests.Qux, TValue>(ref value);
+                            }
+                            case 2 when typeof(TValue) == typeof(int):
+                            {
+                                var value = __2;
+                                return global::System.Runtime.CompilerServices.Unsafe.As<int, TValue>(ref value);
+                            }
+                        }
+
+                        throw new global::System.InvalidCastException($"Unable to cast object of type '{typeof(Foo)}' to type '{typeof(TValue)}'.");
+                    }
+
                     public bool TryGetValue(out global::Macaron.Union.Tests.Qux value)
                     {
                         if (_tag != 1)
@@ -845,6 +885,25 @@ public sealed class SourceGenerationTests
                     #endregion
 
                     #region Methods
+                    public TValue Get<TValue>() where TValue : notnull
+                    {
+                        switch (_tag)
+                        {
+                            case 1 when typeof(TValue) == typeof(global::Macaron.Union.Tests.Qux):
+                            {
+                                var value = __1;
+                                return global::System.Runtime.CompilerServices.Unsafe.As<global::Macaron.Union.Tests.Qux, TValue>(ref value);
+                            }
+                            case 2 when typeof(TValue) == typeof(global::Macaron.Union.Tests.Bar):
+                            {
+                                var value = __2;
+                                return global::System.Runtime.CompilerServices.Unsafe.As<global::Macaron.Union.Tests.Bar, TValue>(ref value);
+                            }
+                        }
+
+                        throw new global::System.InvalidCastException($"Unable to cast object of type '{typeof(Foo)}' to type '{typeof(TValue)}'.");
+                    }
+
                     public bool TryGetValue(out global::Macaron.Union.Tests.Qux value)
                     {
                         if (_tag != 1)
@@ -1268,6 +1327,45 @@ public sealed class SourceGenerationTests
                     #endregion
 
                     #region Methods
+                    public TValue Get<TValue>() where TValue : notnull
+                    {
+                        switch (_tag)
+                        {
+                            case 1 when typeof(TValue) == typeof(global::Macaron.Union.Tests.Qux):
+                            {
+                                var value = __1;
+                                return global::System.Runtime.CompilerServices.Unsafe.As<global::Macaron.Union.Tests.Qux, TValue>(ref value);
+                            }
+                            case 2 when typeof(TValue) == typeof(string):
+                            {
+                                var value = __2;
+                                return global::System.Runtime.CompilerServices.Unsafe.As<string, TValue>(ref value);
+                            }
+                            case 3 when typeof(TValue) == typeof(int):
+                            {
+                                var value = __3;
+                                return global::System.Runtime.CompilerServices.Unsafe.As<int, TValue>(ref value);
+                            }
+                            case 4 when typeof(TValue) == typeof(global::Macaron.Union.Tests.Bar):
+                            {
+                                var value = __4;
+                                return global::System.Runtime.CompilerServices.Unsafe.As<global::Macaron.Union.Tests.Bar, TValue>(ref value);
+                            }
+                            case 5 when typeof(TValue) == typeof(global::Macaron.Union.Tests.Quux):
+                            {
+                                var value = __5;
+                                return global::System.Runtime.CompilerServices.Unsafe.As<global::Macaron.Union.Tests.Quux, TValue>(ref value);
+                            }
+                            case 6 when typeof(TValue) == typeof(global::Macaron.Union.Tests.Baz):
+                            {
+                                var value = __6;
+                                return global::System.Runtime.CompilerServices.Unsafe.As<global::Macaron.Union.Tests.Baz, TValue>(ref value);
+                            }
+                        }
+
+                        throw new global::System.InvalidCastException($"Unable to cast object of type '{typeof(Foo)}' to type '{typeof(TValue)}'.");
+                    }
+
                     public bool TryGetValue(out global::Macaron.Union.Tests.Qux value)
                     {
                         if (_tag != 1)
@@ -1589,7 +1687,7 @@ public sealed class SourceGenerationTests
         var errorDiagnostics = outputCompilation
             .GetDiagnostics()
             .Concat(generatorDiagnostics)
-            .Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
             .ToArray();
 
         Assert.That(
@@ -1713,6 +1811,98 @@ public sealed class SourceGenerationTests
     }
 
     [Test]
+    public void GeneratedGetUsesTheDeclaredCaseTypeAndCustomTag()
+    {
+        var (compilation, driver) = CreateCompilationAndDriver(
+            sourceCode:
+            """
+            using System;
+            using System.Collections.Generic;
+
+            namespace Macaron.Union.Tests;
+
+            public partial class Holder<TValue>
+            {
+                [TaggedUnion]
+                [TaggedUnionCase(typeof(IComparable), tag: 42)]
+                public partial struct Foo : ITaggedUnionCases<IComparable, List<TValue>>
+                {
+                }
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
+            assemblyName: "Macaron.TaggedUnion.Tests.GeneratedGet",
+            generators: [new TaggedUnionGenerator().AsSourceGenerator()]
+        );
+
+        driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
+
+        using var stream = new MemoryStream();
+        var emitResult = outputCompilation.Emit(stream);
+
+        Assert.That(
+            emitResult.Success,
+            Is.True,
+            string.Join(Environment.NewLine, emitResult.Diagnostics.Select(x => x.ToString()))
+        );
+
+        var unionType = Assembly.Load(stream.ToArray())
+            .GetType("Macaron.Union.Tests.Holder`1+Foo", throwOnError: true)!
+            .MakeGenericType(typeof(string));
+        var get = unionType.GetMethod("Get")!;
+        const string text = "value";
+        var list = new List<string> { text };
+        var interfaceCase = Activator.CreateInstance(unionType, text);
+        var listCase = Activator.CreateInstance(unionType, list);
+        var uninitialized = Activator.CreateInstance(unionType);
+        var getInterface = get.MakeGenericMethod(typeof(IComparable));
+        var getString = get.MakeGenericMethod(typeof(string));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(getInterface.Invoke(interfaceCase, null), Is.SameAs(text));
+            Assert.That(get.MakeGenericMethod(typeof(List<string>)).Invoke(listCase, null), Is.SameAs(list));
+            Assert.That(
+                () => getString.Invoke(interfaceCase, null),
+                Throws.TypeOf<TargetInvocationException>().With.InnerException.TypeOf<InvalidCastException>()
+            );
+            Assert.That(
+                () => getInterface.Invoke(uninitialized, null),
+                Throws.TypeOf<TargetInvocationException>().With.InnerException.TypeOf<InvalidCastException>()
+            );
+        });
+    }
+
+    [TestCase("Get", "")]
+    [TestCase("Foo", "public string Get<T>() => \"existing\";")]
+    public void GeneratedGetPreservesExistingDeclarations(string typeName, string members)
+    {
+        var (compilation, driver) = CreateCompilationAndDriver(
+            sourceCode:
+            $$"""
+            namespace Macaron.Union.Tests;
+
+            [TaggedUnion]
+            public partial struct {{typeName}} : ITaggedUnionCases<int, string>
+            {
+                {{members}}
+            }
+            """,
+            additionalAssemblies: [typeof(TaggedUnionAttribute).Assembly],
+            assemblyName: "Macaron.TaggedUnion.Tests.GeneratedGetExistingDeclarations",
+            generators: [new TaggedUnionGenerator().AsSourceGenerator()]
+        );
+
+        driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
+
+        var errors = outputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+
+        Assert.That(errors, Is.Empty, string.Join(Environment.NewLine, errors));
+    }
+
+    [Test]
     public void GeneratedAndRuntimeTaggedUnionsImplicitlyConvertBothWays()
     {
         var (compilation, driver) = CreateCompilationAndDriver(
@@ -1752,14 +1942,14 @@ public sealed class SourceGenerationTests
                 {
                     Foo value = new TaggedUnion<int, string>(42);
 
-                    return value.Value;
+                    return value.Get<int>();
                 }
 
                 public static object? ConvertStringBack()
                 {
                     Foo value = new TaggedUnion<int, string>("value");
 
-                    return value.Value;
+                    return value.Get<string>();
                 }
 
                 public static bool ConvertDefaultBack()
@@ -2039,7 +2229,7 @@ public sealed class SourceGenerationTests
         Assert.Multiple(() =>
         {
             Assert.That(
-                diagnostics.Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error),
+                diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error),
                 Is.Empty
             );
             Assert.That(supportsOfficialUnion, Is.True);
