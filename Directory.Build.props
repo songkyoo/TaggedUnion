@@ -1,9 +1,9 @@
 ﻿<Project>
 
   <PropertyGroup>
-    <TaggedUnionVersion>1.1.2</TaggedUnionVersion>
-    <TaggedUnionJsonSerializerVersion>1.1.2</TaggedUnionJsonSerializerVersion>
-    <TaggedUnionMemoryPackSerializerVersion>1.1.2</TaggedUnionMemoryPackSerializerVersion>
+    <TaggedUnionVersion>1.2.0</TaggedUnionVersion>
+    <TaggedUnionJsonSerializerVersion>1.2.0</TaggedUnionJsonSerializerVersion>
+    <TaggedUnionMemoryPackSerializerVersion>1.2.0</TaggedUnionMemoryPackSerializerVersion>
   </PropertyGroup>
 
 </Project>
